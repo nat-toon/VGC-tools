@@ -119,12 +119,17 @@ export default function ItemsList({ regulation, search, allPokemon = [] }) {
 
   const renderItem = useCallback((i) => <ItemGridRow i={i} />, []);
 
-  const headers = useMemo(() => [
-    { nosort: true },
-    { nosort: true },
-    { label: "Name", onClick: () => cycleSort("name"), active: sortKey?.startsWith("name"), arrow: sortArrow("name") },
-    { nosort: true, label: "Description" },
-  ], [sortKey]);
+  const isSearching = search.trim().length > 0;
+
+  const headers = useMemo(() => {
+    if (isSearching) return [];
+    return [
+      { nosort: true },
+      { nosort: true },
+      { label: "Name", onClick: () => cycleSort("name"), active: sortKey?.startsWith("name"), arrow: sortArrow("name") },
+      { nosort: true, label: "Description" },
+    ];
+  }, [sortKey, isSearching]);
 
   return (
     <div className="tab-panel active" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>

@@ -1273,3 +1273,60 @@ main {
     transform: scale(2);
     transform-origin: center;
 }
+
+/* ---------- Global Search ---------- */
+.global-search {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+.global-search-section {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    margin-bottom: 12px;
+}
+.global-search-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    user-select: none;
+}
+.global-search-section-count {
+    color: var(--muted);
+    font-weight: 400;
+}
+.global-search-results {
+    display: flex;
+    flex-direction: column;
+}
+.global-search-row {
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.global-search-row:last-child {
+    border-bottom: none;
+}
+.global-search-row:hover {
+    background: #181818;
+}
+.global-search-row:focus {
+    outline: none;
+    background: #1d1d1d;
+}
+.global-search-row:focus-visible {
+    outline: 2px solid var(--border-strong);
+    outline-offset: -2px;
+}

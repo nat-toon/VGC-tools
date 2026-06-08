@@ -8,6 +8,7 @@ const TypesList = lazy(() => import("./components/TypesList.jsx"));
 const MovesList = lazy(() => import("./components/MovesList.jsx"));
 const ItemsList = lazy(() => import("./components/ItemsList.jsx"));
 const AbilitiesList = lazy(() => import("./components/AbilitiesList.jsx"));
+const GlobalSearch = lazy(() => import("./components/GlobalSearch.jsx"));
 import { loadPokedex } from "./lib/pokedex.js";
 import { loadMoves } from "./lib/moves.js";
 import { loadLearnsets } from "./lib/learnsets.js";
@@ -48,6 +49,8 @@ export default function App() {
     localStorage.setItem(REG_KEY, newReg);
   }
 
+  const isSearching = search.trim().length > 0;
+
   return (
     <>
       <Header />
@@ -73,35 +76,45 @@ export default function App() {
           </div>
         </div>
 
-        <ViewSelector value={view} onChange={setView} />
+        {!isSearching && <ViewSelector value={view} onChange={setView} />}
 
         {!allPokemonLoaded ? (
           <div className="loading-text">Loading…</div>
         ) : (
           <Suspense fallback={<div className="loading-text">Loading…</div>}>
-          {view === "pokemon" && (
-            <Pokedex
-              allPokemon={allPokemon}
-              regulation={regulation}
-              search={search}
-              onViewChange={setView}
-            />
-          )}
-          {view === "types" && (
-            <TypesList
+          {isSearching && view !== "items" ? (
+            <GlobalSearch
               allPokemon={allPokemon}
               regulation={regulation}
               search={search}
             />
-          )}
-          {view === "moves" && (
-            <MovesList regulation={regulation} search={search} allPokemon={allPokemon} onViewChange={setView} />
-          )}
-          {view === "items" && (
-            <ItemsList regulation={regulation} search={search} allPokemon={allPokemon} />
-          )}
-          {view === "abilities" && (
-            <AbilitiesList regulation={regulation} search={search} allPokemon={allPokemon} />
+          ) : (
+            <>
+              {view === "pokemon" && (
+                <Pokedex
+                  allPokemon={allPokemon}
+                  regulation={regulation}
+                  search={search}
+                  onViewChange={setView}
+                />
+              )}
+              {view === "types" && (
+                <TypesList
+                  allPokemon={allPokemon}
+                  regulation={regulation}
+                  search={search}
+                />
+              )}
+              {view === "moves" && (
+                <MovesList regulation={regulation} search={search} allPokemon={allPokemon} onViewChange={setView} />
+              )}
+              {view === "items" && (
+                <ItemsList regulation={regulation} search={search} allPokemon={allPokemon} />
+              )}
+              {view === "abilities" && (
+                <AbilitiesList regulation={regulation} search={search} allPokemon={allPokemon} />
+              )}
+            </>
           )}
         </Suspense>
         )}
