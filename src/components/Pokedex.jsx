@@ -5,6 +5,7 @@ import Icon from "./Icon.jsx";
 import Modal from "./Modal.jsx";
 import PokemonEntry from "./PokemonEntry.jsx";
 import { getPool } from "../lib/regulations.js";
+import { getLearnset } from "../lib/learnsets.js";
 import { STAT_CONFIG } from "../lib/constants.js";
 import { bst, displayName, applySearchPokemon } from "../lib/utils.js";
 
@@ -75,16 +76,38 @@ const PokemonGridRow = memo(function PokemonGridRow({ p }) {
   );
 });
 
-export default function Pokedex({ allPokemon, regulation, search, onViewChange }) {
+export default function Pokedex({ allPokemon, regulation, search, filters, onViewChange }) {
   const [sortKey, setSortKey] = useState("");
   const [selected, setSelected] = useState(null);
 
   const regPool = useMemo(() => getPool(allPokemon, regulation), [allPokemon, regulation]);
 
-  const items = useMemo(
-    () => sortItems(applySearchPokemon(regPool, search), sortKey),
-    [regPool, search, sortKey],
-  );
+  const items = useMemo(() => {
+    let pool = applySearchPokemon(regPool, search);
+
+    if (filters) {
+      if (filters.types.length > 0) {
+        pool = pool.filter((p) =>
+          filters.types.every((t) => (p.types || []).includes(t))
+        );
+      }
+      if (filters.moves.length > 0) {
+        pool = pool.filter((p) => {
+          const learnset = getLearnset(p.key, regulation);
+          return Array.isArray(learnset) && filters.moves.every((m) => learnset.includes(m));
+        });
+      }
+      if (filters.abilities.length > 0) {
+        pool = pool.filter((p) =>
+          filters.abilities.some((a) =>
+            (p.abilities || []).some((pa) => pa.name && pa.name.toLowerCase() === a.toLowerCase())
+          )
+        );
+      }
+    }
+
+    return sortItems(pool, sortKey);
+  }, [regPool, search, sortKey, filters, regulation]);
 
   function cycleSort(field) {
     setSortKey((cur) => {

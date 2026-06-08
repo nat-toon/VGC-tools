@@ -301,7 +301,7 @@ main {
     gap: 12px;
     align-items: center;
     flex-wrap: wrap;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 .pokedex-search-row .input {
     flex: 1 1 240px;
@@ -1329,4 +1329,70 @@ main {
 .global-search-row:focus-visible {
     outline: 2px solid var(--border-strong);
     outline-offset: -2px;
+}
+
+/* ---------- Filter Bar ---------- */
+.filter-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 0 12px;
+}
+.filter-bar:empty {
+    display: none;
+}
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border-strong);
+    background: var(--panel);
+    cursor: pointer;
+    user-select: none;
+    line-height: 1;
+    transition: background 0.1s;
+}
+.filter-chip:hover {
+    background: #1a1a1a;
+}
+.filter-chip-label {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.filter-chip-type {
+    border-color: #3d5a80;
+    background: rgba(61, 90, 128, 0.15);
+}
+.filter-chip-move {
+    border-color: #3d805a;
+    background: rgba(61, 128, 90, 0.15);
+}
+.filter-chip-ability {
+    border-color: #6b3d80;
+    background: rgba(107, 61, 128, 0.15);
+}
+.filter-clear-all {
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+}
+.filter-clear-all:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+}
+.global-search-row.filter-active {
+    background: rgba(93, 139, 245, 0.08);
 }

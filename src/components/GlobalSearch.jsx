@@ -4,12 +4,11 @@ import CategoryIcon from "./CategoryIcon.jsx";
 import Icon from "./Icon.jsx";
 import Modal from "./Modal.jsx";
 import PokemonEntry from "./PokemonEntry.jsx";
-import MoveDetail from "./MoveDetail.jsx";
-import AbilityDetail from "./AbilityDetail.jsx";
 import PokedexTable from "./PokedexTable.jsx";
 import { getPool } from "../lib/regulations.js";
 import { getAllMoves, isMoveLegal } from "../lib/moves.js";
 import { getAllAbilities, isAbilityLegal } from "../lib/abilities.js";
+import { getLearnset } from "../lib/learnsets.js";
 import { applySearchText, displayName, formatPower, formatAcc } from "../lib/utils.js";
 
 const TYPES = [
@@ -51,9 +50,9 @@ const PokemonRow = memo(function PokemonRow({ p }) {
   );
 });
 
-const TypeRow = memo(function TypeRow({ t }) {
+const TypeRow = memo(function TypeRow({ t, active }) {
   return (
-    <div className="global-search-row" style={{ display: "grid", gridTemplateColumns: "48px 1fr", alignItems: "center", gap: "8px" }}>
+    <div className={`global-search-row${active ? " filter-active" : ""}`} style={{ display: "grid", gridTemplateColumns: "48px 1fr", alignItems: "center", gap: "8px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         <TypeIcon type={t} size={28} />
       </div>
@@ -62,9 +61,9 @@ const TypeRow = memo(function TypeRow({ t }) {
   );
 });
 
-const MoveRow = memo(function MoveRow({ m }) {
+const MoveRow = memo(function MoveRow({ m, active }) {
   return (
-    <div className="global-search-row" style={{ display: "grid", gridTemplateColumns: "48px 160px 56px 56px 44px 56px 1fr", alignItems: "center", gap: "8px" }}>
+    <div className={`global-search-row${active ? " filter-active" : ""}`} style={{ display: "grid", gridTemplateColumns: "48px 160px 56px 56px 44px 56px 1fr", alignItems: "center", gap: "8px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         <TypeIcon type={m.type} size={28} />
       </div>
@@ -93,9 +92,9 @@ const MoveRow = memo(function MoveRow({ m }) {
   );
 });
 
-const AbilityRow = memo(function AbilityRow({ a }) {
+const AbilityRow = memo(function AbilityRow({ a, active }) {
   return (
-    <div className="global-search-row" style={{ display: "grid", gridTemplateColumns: "160px 1fr", alignItems: "center", gap: "8px" }}>
+    <div className={`global-search-row${active ? " filter-active" : ""}`} style={{ display: "grid", gridTemplateColumns: "160px 1fr", alignItems: "center", gap: "8px" }}>
       <div className="vt-cell vt-name">{a.name}</div>
       <div className="vt-cell vt-desc">{a.shortDesc || a.desc || "\u2014"}</div>
     </div>
@@ -111,21 +110,43 @@ function SectionHeader({ label, count }) {
   );
 }
 
-export default function GlobalSearch({ allPokemon, regulation, search }) {
+export default function GlobalSearch({ allPokemon, regulation, search, filters, setFilters, setSearch }) {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
-  const [selectedMove, setSelectedMove] = useState(null);
-  const [selectedAbility, setSelectedAbility] = useState(null);
-  const [selectedType, setSelectedType] = useState(null);
 
   const regPool = useMemo(() => getPool(allPokemon, regulation), [allPokemon, regulation]);
 
+  const hasActiveFilters = filters.types.length > 0 || filters.moves.length > 0 || filters.abilities.length > 0;
+  const filtersOnly = hasActiveFilters && !search.trim();
+
   const pokemon = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const filtered = q
+    let filtered = q
       ? regPool.filter((p) => p._lcName.includes(q))
       : regPool;
+
+    if (filters.types.length > 0) {
+      filtered = filtered.filter((p) =>
+        filters.types.every((t) => (p.types || []).includes(t))
+      );
+    }
+
+    if (filters.moves.length > 0) {
+      filtered = filtered.filter((p) => {
+        const learnset = getLearnset(p.key, regulation);
+        return Array.isArray(learnset) && filters.moves.every((m) => learnset.includes(m));
+      });
+    }
+
+    if (filters.abilities.length > 0) {
+      filtered = filtered.filter((p) =>
+        filters.abilities.some((a) =>
+          (p.abilities || []).some((pa) => pa.name && pa.name.toLowerCase() === a.toLowerCase())
+        )
+      );
+    }
+
     return filtered.sort((a, b) => a.num - b.num || a.name.localeCompare(b.name));
-  }, [regPool, search]);
+  }, [regPool, search, filters, regulation]);
 
   const types = useMemo(
     () => TYPES
@@ -142,7 +163,7 @@ export default function GlobalSearch({ allPokemon, regulation, search }) {
       .filter((m) => {
         const q = search.trim().toLowerCase();
         if (!q) return true;
-        return m._lcName.includes(q) || (m.type || "").toLowerCase().includes(q);
+        return m._lcName.includes(q);
       })
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [regulation, search]);
@@ -156,34 +177,38 @@ export default function GlobalSearch({ allPokemon, regulation, search }) {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [regulation, search]);
 
-  const typeMembers = useMemo(() => {
-    if (!selectedType) return [];
-    return applySearchPokemon(regPool, search)
-      .filter((p) => (p.types || []).includes(selectedType))
-      .sort((a, b) => a.num - b.num || a.name.localeCompare(b.name));
-  }, [selectedType, regPool, search]);
-
   const handlePokemonClick = useCallback((p) => {
     setSelectedPokemon((cur) => (cur && cur.key === p.key ? null : p));
   }, []);
 
-  const handleMoveClick = useCallback((m) => {
-    setSelectedMove((cur) => (cur && cur._key === m._key ? null : m));
-  }, []);
-
-  const handleAbilityClick = useCallback((a) => {
-    setSelectedAbility((cur) => (cur && cur._key === a._key ? null : a));
-  }, []);
+  const toggleFilter = useCallback((category, value) => {
+    setSearch("");
+    setFilters((prev) => {
+      const list = prev[category];
+      const next = list.includes(value)
+        ? list.filter((v) => v !== value)
+        : [...list, value];
+      return { ...prev, [category]: next };
+    });
+  }, [setFilters, setSearch]);
 
   const handleTypeClick = useCallback((t) => {
-    setSelectedType((cur) => (cur === t ? null : t));
-  }, []);
+    toggleFilter("types", t);
+  }, [toggleFilter]);
+
+  const handleMoveClick = useCallback((m) => {
+    toggleFilter("moves", m._key);
+  }, [toggleFilter]);
+
+  const handleAbilityClick = useCallback((a) => {
+    toggleFilter("abilities", a.name);
+  }, [toggleFilter]);
 
   return (
     <div className="global-search tab-panel active">
       {pokemon.length > 0 && (
         <div className="global-search-section">
-          <SectionHeader label="Pokemon" count={pokemon.length} />
+          {!filtersOnly && <SectionHeader label="Pokemon" count={pokemon.length} />}
           <div className="global-search-results">
             {pokemon.map((p) => (
               <div key={p.key} onClick={() => handlePokemonClick(p)} role="button" tabIndex={0}>
@@ -194,78 +219,54 @@ export default function GlobalSearch({ allPokemon, regulation, search }) {
         </div>
       )}
 
-      {types.length > 0 && (
+      {!filtersOnly && types.length > 0 && (
         <div className="global-search-section">
           <SectionHeader label="Types" count={types.length} />
           <div className="global-search-results">
             {types.map((t) => (
               <div key={t} onClick={() => handleTypeClick(t)} role="button" tabIndex={0}>
-                <TypeRow t={t} />
+                <TypeRow t={t} active={filters.types.includes(t)} />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {moves.length > 0 && (
+      {!filtersOnly && moves.length > 0 && (
         <div className="global-search-section">
           <SectionHeader label="Moves" count={moves.length} />
           <div className="global-search-results">
             {moves.map((m) => (
               <div key={m._key} onClick={() => handleMoveClick(m)} role="button" tabIndex={0}>
-                <MoveRow m={m} />
+                <MoveRow m={m} active={filters.moves.includes(m._key)} />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {abilities.length > 0 && (
+      {!filtersOnly && abilities.length > 0 && (
         <div className="global-search-section">
           <SectionHeader label="Abilities" count={abilities.length} />
           <div className="global-search-results">
             {abilities.map((a) => (
               <div key={a._key} onClick={() => handleAbilityClick(a)} role="button" tabIndex={0}>
-                <AbilityRow a={a} />
+                <AbilityRow a={a} active={filters.abilities.includes(a.name)} />
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {pokemon.length === 0 && types.length === 0 && moves.length === 0 && abilities.length === 0 && (
-        <div className="empty-state">No results found.</div>
+      {pokemon.length === 0 && (filtersOnly || (types.length === 0 && moves.length === 0 && abilities.length === 0)) && (
+        <div className="empty-state">
+          {filtersOnly ? "No Pokemon match the active filters." : "No results found."}
+        </div>
       )}
 
       <Modal open={!!selectedPokemon} onClose={() => setSelectedPokemon(null)} labelledBy="entry-name">
         {selectedPokemon && (
           <PokemonEntry pokemon={selectedPokemon} regulation={regulation} allPokemon={allPokemon} />
-        )}
-      </Modal>
-
-      <Modal open={!!selectedMove} onClose={() => setSelectedMove(null)} labelledBy="move-name">
-        {selectedMove && <MoveDetail move={selectedMove} regulation={regulation} allPokemon={allPokemon} />}
-      </Modal>
-
-      <Modal open={!!selectedAbility} onClose={() => setSelectedAbility(null)} labelledBy="ability-name">
-        {selectedAbility && (
-          <AbilityDetail ability={selectedAbility} regulation={regulation} allPokemon={allPokemon} />
-        )}
-      </Modal>
-
-      <Modal open={!!selectedType} onClose={() => setSelectedType(null)} labelledBy="type-detail">
-        {selectedType && (
-          <div className="type-detail">
-            <div className="type-detail-head">
-              <TypeIcon type={selectedType} size={48} />
-              <h2 id="type-detail" className="type-detail-name">{selectedType}</h2>
-            </div>
-            <PokedexTable
-              pokemon={typeMembers}
-              regulation={regulation}
-              allPokemon={allPokemon}
-            />
-          </div>
         )}
       </Modal>
     </div>

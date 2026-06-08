@@ -1,7 +1,9 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Header from "./components/Header.jsx";
 import SearchInput from "./components/SearchInput.jsx";
 import ViewSelector from "./components/ViewSelector.jsx";
+import TypeIcon from "./components/TypeIcon.jsx";
+import { getMove } from "./lib/moves.js";
 
 const Pokedex = lazy(() => import("./components/Pokedex.jsx"));
 const TypesList = lazy(() => import("./components/TypesList.jsx"));
@@ -26,6 +28,20 @@ export default function App() {
   });
   const [view, setView] = useState("pokemon");
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState({ types: [], moves: [], abilities: [] });
+
+  const hasActiveFilters = filters.types.length > 0 || filters.moves.length > 0 || filters.abilities.length > 0;
+
+  const removeFilter = useCallback((category, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [category]: prev[category].filter((v) => v !== value),
+    }));
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setFilters({ types: [], moves: [], abilities: [] });
+  }, []);
 
   useEffect(() => {
     loadPokedex()
@@ -76,7 +92,31 @@ export default function App() {
           </div>
         </div>
 
-        {!isSearching && <ViewSelector value={view} onChange={setView} />}
+        {hasActiveFilters && (
+          <div className="filter-bar">
+            {filters.types.map((t) => (
+              <span key={`type-${t}`} className="filter-chip filter-chip-type" onClick={() => removeFilter("types", t)} role="button" tabIndex={0}>
+                <TypeIcon type={t} size={16} />
+              </span>
+            ))}
+            {filters.moves.map((m) => {
+              const moveData = getMove(m);
+              return (
+                <span key={`move-${m}`} className="filter-chip filter-chip-move" onClick={() => removeFilter("moves", m)} role="button" tabIndex={0}>
+                  <span className="filter-chip-label">{moveData?.name || m}</span>
+                </span>
+              );
+            })}
+            {filters.abilities.map((a) => (
+              <span key={`ability-${a}`} className="filter-chip filter-chip-ability" onClick={() => removeFilter("abilities", a)} role="button" tabIndex={0}>
+                <span className="filter-chip-label">{a}</span>
+              </span>
+            ))}
+            <button className="filter-clear-all" onClick={clearFilters}>Clear all</button>
+          </div>
+        )}
+
+        {!isSearching && !hasActiveFilters && <ViewSelector value={view} onChange={setView} />}
 
         {!allPokemonLoaded ? (
           <div className="loading-text">Loading…</div>
@@ -87,6 +127,17 @@ export default function App() {
               allPokemon={allPokemon}
               regulation={regulation}
               search={search}
+              filters={filters}
+              setFilters={setFilters}
+              setSearch={setSearch}
+            />
+          ) : hasActiveFilters && view === "pokemon" ? (
+            <Pokedex
+              allPokemon={allPokemon}
+              regulation={regulation}
+              search=""
+              filters={filters}
+              onViewChange={setView}
             />
           ) : (
             <>
