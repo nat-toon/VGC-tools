@@ -1,3 +1,9 @@
+@property --windowWidth {
+    syntax: "<number>";
+    inherits: true;
+    initial-value: 0;
+}
+
 :root {
     --bg: #0a0a0a;
     --panel: #141414;
@@ -27,7 +33,7 @@ html {
 body {
     margin: 0;
     padding: 0;
-    min-height: 100%;
+    height: 100%;
     background: var(--bg);
     color: var(--text);
     font:
@@ -38,6 +44,13 @@ body {
         sans-serif;
     display: flex;
     flex-direction: column;
+}
+
+#root {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
 }
 
 /* ---------- Header ---------- */
@@ -67,7 +80,9 @@ header nav a {
     font-weight: 600;
     padding: 6px 12px;
     border-radius: 6px;
-    transition: background 0.1s, color 0.1s;
+    transition:
+        background 0.1s,
+        color 0.1s;
 }
 header nav a:hover {
     color: var(--text);
@@ -87,6 +102,7 @@ main {
     display: flex;
     flex-direction: column;
     width: 100%;
+    min-height: 0;
 }
 
 /* ---------- Toolbar ---------- */
@@ -211,10 +227,10 @@ main {
     display: block;
 }
 .pkmn-table .th-name {
-    width: 160px;
+    width: auto;
 }
 .pkmn-table .cell-name {
-    width: 160px;
+    width: auto;
     font-weight: 600;
     text-transform: capitalize;
     color: var(--text);
@@ -259,7 +275,7 @@ main {
 .pkmn-table .cell-ab,
 .pkmn-table .th-hab,
 .pkmn-table .cell-hab {
-    width: 180px;
+    width: 120px;
 }
 .pkmn-table .stat-cell,
 .pkmn-table .cell-bst {
@@ -946,6 +962,8 @@ main {
     border: 1px solid var(--border);
     background: var(--panel);
     overflow: hidden;
+    flex: 1;
+    min-height: 0;
 }
 .vt-header {
     display: grid;
@@ -1119,7 +1137,7 @@ main {
 /* Virtual table grid templates */
 .vt-header.pkmn-grid,
 .vt-row.pkmn-grid {
-    grid-template-columns: 64px 56px 240px 72px repeat(6, 36px) 54px 1fr 1fr;
+    grid-template-columns: 64px 56px 1fr 72px repeat(6, 36px) 54px 120px 120px;
 }
 .vt-header.moves-grid,
 .vt-row.moves-grid {
@@ -1416,7 +1434,9 @@ main {
     font-size: 11px;
     font-family: inherit;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
+    transition:
+        background 0.1s,
+        color 0.1s;
 }
 .filter-clear-all:hover {
     background: rgba(255, 255, 255, 0.06);
@@ -1444,4 +1464,13 @@ main {
 .placeholder-text {
     color: var(--muted);
     font-size: 15px;
+}
+
+/* ============================================================
+   MOBILE / RESPONSIVE — single breakpoint at 1024px
+   ============================================================ */
+
+:root {
+    zoom: calc(var(--windowWidth) / 1024);
+    transform-origin: top left;
 }

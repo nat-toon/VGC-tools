@@ -2,12 +2,6 @@ import { useRef, useState, useEffect, memo, createElement } from "react";
 import { List } from "react-window";
 
 const OVERCAN = 12;
-const HEADER_HEIGHT_ESTIMATE = 220;
-
-function getAvailableHeight() {
-  if (typeof window === "undefined") return 600;
-  return window.innerHeight - HEADER_HEIGHT_ESTIMATE;
-}
 
 const Row = memo(function Row({ index, style, items, gridClass, selectedKey, getKey, onSelect, renderItem }) {
   const item = items[index];
@@ -35,14 +29,18 @@ export default function VirtualTable({
   onSelect,
   emptyText,
 }) {
-  const [height, setHeight] = useState(getAvailableHeight);
+  const wrapRef = useRef(null);
+  const [height, setHeight] = useState(0);
 
   useEffect(() => {
-    function onResize() {
-      setHeight(getAvailableHeight());
-    }
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setHeight(entry.contentBoxSize?.[0]?.blockSize ?? el.clientHeight);
+    });
+    ro.observe(el);
+    setHeight(el.clientHeight);
+    return () => ro.disconnect();
   }, []);
 
   const rowProps = {
@@ -56,30 +54,37 @@ export default function VirtualTable({
 
   const listHeight = items.length === 0 ? 0 : Math.min(items.length * rowHeight, height);
 
-  return createElement("div", { className: "vt-wrap", style: { height, display: "flex", flexDirection: "column" } },
-    createElement("div", { className: `vt-header ${gridClass}`, role: "row" },
+  return createElement(
+    "div",
+    { ref: wrapRef, className: "vt-wrap" },
+    createElement(
+      "div",
+      { className: `vt-header ${gridClass}`, role: "row" },
       headers.map((h, i) =>
-        createElement("div", {
-          key: i,
-          className: `vt-hcell${h.nosort ? " nosort" : ""}${h.active ? " active" : ""}${h.className ? ` ${h.className}` : ""}`,
-          onClick: h.onClick,
-          role: h.nosort ? undefined : "columnheader",
-          style: h.style,
-        },
+        createElement(
+          "div",
+          {
+            key: i,
+            className: `vt-hcell${h.nosort ? " nosort" : ""}${h.active ? " active" : ""}${h.className ? ` ${h.className}` : ""}`,
+            onClick: h.onClick,
+            role: h.nosort ? undefined : "columnheader",
+            style: h.style,
+          },
           h.label,
           h.arrow ? createElement("span", { className: "vt-arrow" }, ` ${h.arrow}`) : null,
         ),
       ),
     ),
-    listHeight > 0 && createElement(List, {
-      height: listHeight,
-      rowCount: items.length,
-      rowHeight,
-      rowComponent: Row,
-      rowProps,
-      overscanCount: OVERCAN,
-      width: "100%",
-    }),
+    listHeight > 0 &&
+      createElement(List, {
+        height: listHeight,
+        rowCount: items.length,
+        rowHeight,
+        rowComponent: Row,
+        rowProps,
+        overscanCount: OVERCAN,
+        width: "100%",
+      }),
     items.length === 0 && emptyText && createElement("div", { className: "empty-state" }, emptyText),
   );
 }
