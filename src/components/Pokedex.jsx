@@ -7,7 +7,7 @@ import PokemonEntry from "./PokemonEntry.jsx";
 import { getPool } from "../lib/regulations.js";
 import { getLearnset } from "../lib/learnsets.js";
 import { STAT_CONFIG } from "../lib/constants.js";
-import { bst, displayName, applySearchPokemon } from "../lib/utils.js";
+import { bst, displayName, applySearchPokemon, cycleSort as utilCycleSort, sortArrow as utilSortArrow } from "../lib/utils.js";
 
 const ROW_HEIGHT = 44;
 

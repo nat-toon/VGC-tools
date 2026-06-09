@@ -5,14 +5,9 @@ import PokedexTable from "./PokedexTable.jsx";
 import VirtualTable from "./VirtualTable.jsx";
 import { getPool } from "../lib/regulations.js";
 import { applySearchPokemon, sortByNumAsc } from "../lib/utils.js";
+import { TYPES } from "../lib/constants.js";
 
 const ROW_HEIGHT = 44;
-
-const TYPES = [
-  "normal", "fire", "water", "electric", "grass", "ice",
-  "fighting", "poison", "ground", "flying", "psychic", "bug",
-  "rock", "ghost", "dragon", "dark", "steel", "fairy",
-];
 
 const TypeGridRow = memo(function TypeGridRow({ t }) {
   return (

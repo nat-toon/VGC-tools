@@ -1,4 +1,43 @@
 import { STAT_CONFIG } from "./constants.js";
+import { resolveAlias, getAliasesMatching } from "./aliases.js";
+
+export function buildAliasSet(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return { q: "", aliasSet: new Set() };
+  const exactAlias = resolveAlias(q);
+  const exactAliasLower = exactAlias ? exactAlias.toLowerCase() : null;
+  const aliasTargets = getAliasesMatching(q);
+  const aliasSet = new Set(aliasTargets.map((t) => t.toLowerCase()));
+  if (exactAliasLower) aliasSet.add(exactAliasLower);
+  return { q, aliasSet };
+}
+
+export function matchesAlias(item, q, aliasSet) {
+  if (item._lcName.includes(q)) return true;
+  if (aliasSet.has(item._lcName)) return true;
+  return false;
+}
+
+export function cycleSort(sortKey, field) {
+  if (!sortKey || !sortKey.startsWith(field)) return field + "-asc";
+  return sortKey.split("-")[1] === "asc" ? field + "-desc" : "";
+}
+
+export function sortArrow(sortKey, field) {
+  if (!sortKey || !sortKey.startsWith(field)) return null;
+  return sortKey.split("-")[1] === "asc" ? "▲" : "▼";
+}
+
+export function createSortFromKey(fieldSorters) {
+  return (items, sortKey) => {
+    if (!sortKey) return items;
+    const [field, dir] = sortKey.split("-");
+    const desc = dir === "desc" ? -1 : 1;
+    const sorter = fieldSorters[field];
+    if (!sorter) return items;
+    return items.slice().sort((a, b) => desc * sorter(a, b));
+  };
+}
 
 export function formatAcc(value) {
   if (value === true) return "\u2014";
@@ -25,8 +64,16 @@ export function displayName(name) {
 export function applySearchPokemon(pool, search) {
   const q = search.trim().toLowerCase();
   if (!q) return pool;
+
+  const exactAlias = resolveAlias(q);
+  const exactAliasLower = exactAlias ? exactAlias.toLowerCase() : null;
+  const aliasTargets = getAliasesMatching(q);
+  const aliasSet = new Set(aliasTargets.map((t) => t.toLowerCase()));
+  if (exactAliasLower) aliasSet.add(exactAliasLower);
+
   return pool.filter((p) => {
     if (p._lcName.includes(q)) return true;
+    if (aliasSet.has(p._lcName)) return true;
     if (String(p.num).includes(q)) return true;
     return p._lcAbil.some((a) => a.includes(q));
   });

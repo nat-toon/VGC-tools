@@ -4,18 +4,12 @@ import CategoryIcon from "./CategoryIcon.jsx";
 import Modal from "./Modal.jsx";
 import MoveDetail from "./MoveDetail.jsx";
 import VirtualTable from "./VirtualTable.jsx";
+import SectionHeader from "./SectionHeader.jsx";
 import { getAllMoves, isMoveLegal } from "../lib/moves.js";
-import { formatAcc, formatPower } from "../lib/utils.js";
+import { formatAcc, formatPower, buildAliasSet, matchesAlias } from "../lib/utils.js";
+import { TYPES, CATEGORIES, CATEGORY_COLORS } from "../lib/constants.js";
 
 const ROW_HEIGHT = 44;
-
-const CATEGORIES = ["Physical", "Special", "Status"];
-
-const TYPES = [
-  "normal", "fire", "water", "electric", "grass", "ice",
-  "fighting", "poison", "ground", "flying", "psychic", "bug",
-  "rock", "ghost", "dragon", "dark", "steel", "fairy",
-];
 
 function sortItems(items, sortKey) {
   if (!sortKey) {
@@ -43,21 +37,6 @@ function sortItems(items, sortKey) {
     return 0;
   });
 }
-
-function SectionHeader({ label, count }) {
-  return (
-    <div className="global-search-section-header">
-      <span>{label}</span>
-      <span className="global-search-section-count">({count})</span>
-    </div>
-  );
-}
-
-const CATEGORY_COLORS = {
-  physical: "#ed6744",
-  special: "#60acf1",
-  status: "#959899",
-};
 
 const CategorySearchRow = memo(function CategorySearchRow({ cat, active }) {
   const bg = CATEGORY_COLORS[cat.toLowerCase()] || "transparent";
@@ -146,7 +125,7 @@ const MoveGridRow = memo(function MoveGridRow({ m }) {
   );
 });
 
-export default function MovesList({ regulation, search, allPokemon = [], onViewChange, filters, setFilters, setSearch }) {
+export default function MovesList({ regulation, search, allPokemon = [], onViewChange, filters, addFilter, removeFilter, setSearch }) {
   const [sortKey, setSortKey] = useState("");
   const [selected, setSelected] = useState(null);
 
@@ -170,10 +149,10 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
   }, [search]);
 
   const matchingMoves = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const { q, aliasSet } = buildAliasSet(search);
     if (!q) return [];
     return items
-      .filter((m) => m._lcName.includes(q))
+      .filter((m) => matchesAlias(m, q, aliasSet))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [items, search]);
 
@@ -194,14 +173,12 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
 
   const toggleFilter = useCallback((category, value) => {
     setSearch("");
-    setFilters((prev) => {
-      const list = prev[category];
-      const next = list.includes(value)
-        ? list.filter((v) => v !== value)
-        : [...list, value];
-      return { ...prev, [category]: next };
-    });
-  }, [setFilters, setSearch]);
+    if (filters[category].includes(value)) {
+      removeFilter(category, value);
+    } else {
+      addFilter(category, value);
+    }
+  }, [addFilter, removeFilter, setSearch, filters]);
 
   const handleCategoryClick = useCallback((cat) => {
     toggleFilter("categories", cat);

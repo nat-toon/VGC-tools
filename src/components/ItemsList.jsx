@@ -6,7 +6,7 @@ import VirtualTable from "./VirtualTable.jsx";
 import { getAllItems, isItemLegal } from "../lib/items.js";
 import { getItemIcon } from "../lib/sprite.js";
 import { getPool } from "../lib/regulations.js";
-import { applySearchText, sortByNameAsc } from "../lib/utils.js";
+import { sortByNameAsc, buildAliasSet, matchesAlias } from "../lib/utils.js";
 
 const ROW_HEIGHT = 44;
 
@@ -88,7 +88,11 @@ export default function ItemsList({ regulation, search, allPokemon = [] }) {
   }, [regulation]);
 
   const filtered = useMemo(() => {
-    const searched = applySearchText(items, search);
+    const { q, aliasSet } = buildAliasSet(search);
+    const searched = items.filter((i) => {
+      if (!q) return true;
+      return matchesAlias(i, q, aliasSet);
+    });
     if (!sortKey) return searched.sort(sortByNameAsc);
     const [field, dir] = sortKey.split("-");
     const desc = dir === "desc" ? -1 : 1;

@@ -51,6 +51,7 @@ const MASTER_TS_FILES = [
   { rel: 'data/pokedex.ts' },
   { rel: 'data/items.ts' },
   { rel: 'data/abilities.ts' },
+  { rel: 'data/aliases.ts' },
   { rel: 'data/text/abilities.ts' },
   { rel: 'data/text/items.ts' },
 ];

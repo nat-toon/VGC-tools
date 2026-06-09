@@ -5,17 +5,13 @@ import Icon from "./Icon.jsx";
 import Modal from "./Modal.jsx";
 import PokemonEntry from "./PokemonEntry.jsx";
 import PokedexTable from "./PokedexTable.jsx";
+import SectionHeader from "./SectionHeader.jsx";
 import { getPool } from "../lib/regulations.js";
 import { getAllMoves, isMoveLegal } from "../lib/moves.js";
 import { getAllAbilities, isAbilityLegal } from "../lib/abilities.js";
 import { getLearnset } from "../lib/learnsets.js";
-import { applySearchText, displayName, formatPower, formatAcc } from "../lib/utils.js";
-
-const TYPES = [
-  "normal", "fire", "water", "electric", "grass", "ice",
-  "fighting", "poison", "ground", "flying", "psychic", "bug",
-  "rock", "ghost", "dragon", "dark", "steel", "fairy",
-];
+import { displayName, formatPower, formatAcc, buildAliasSet, matchesAlias } from "../lib/utils.js";
+import { TYPES } from "../lib/constants.js";
 
 const PokemonRow = memo(function PokemonRow({ p }) {
   const abilities = p.abilities || [];
@@ -101,16 +97,7 @@ const AbilityRow = memo(function AbilityRow({ a, active }) {
   );
 });
 
-function SectionHeader({ label, count }) {
-  return (
-    <div className="global-search-section-header">
-      <span>{label}</span>
-      <span className="global-search-section-count">({count})</span>
-    </div>
-  );
-}
-
-export default function GlobalSearch({ allPokemon, regulation, search, filters, setFilters, setSearch }) {
+export default function GlobalSearch({ allPokemon, regulation, search, filters, addFilter, removeFilter, setSearch }) {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
 
   const regPool = useMemo(() => getPool(allPokemon, regulation), [allPokemon, regulation]);
@@ -119,9 +106,9 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
   const filtersOnly = hasActiveFilters && !search.trim();
 
   const pokemon = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const { q, aliasSet } = buildAliasSet(search);
     let filtered = q
-      ? regPool.filter((p) => p._lcName.includes(q))
+      ? regPool.filter((p) => matchesAlias(p, q, aliasSet))
       : regPool;
 
     if (filters.types.length > 0) {
@@ -157,23 +144,21 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
 
   const moves = useMemo(() => {
     const all = getAllMoves();
+    const { q, aliasSet } = buildAliasSet(search);
     return all
       .filter((m) => isMoveLegal(m._key, regulation))
       .map((m) => ({ ...m, _lcName: m.name.toLowerCase() }))
-      .filter((m) => {
-        const q = search.trim().toLowerCase();
-        if (!q) return true;
-        return m._lcName.includes(q);
-      })
+      .filter((m) => !q || matchesAlias(m, q, aliasSet))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [regulation, search]);
 
   const abilities = useMemo(() => {
     const all = getAllAbilities();
+    const { q, aliasSet } = buildAliasSet(search);
     return all
       .filter((a) => isAbilityLegal(a._key, regulation))
       .map((a) => ({ ...a, _lcName: a.name.toLowerCase() }))
-      .filter((a) => applySearchText([a], search).length > 0)
+      .filter((a) => !q || matchesAlias(a, q, aliasSet))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [regulation, search]);
 
@@ -183,14 +168,12 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
 
   const toggleFilter = useCallback((category, value) => {
     setSearch("");
-    setFilters((prev) => {
-      const list = prev[category];
-      const next = list.includes(value)
-        ? list.filter((v) => v !== value)
-        : [...list, value];
-      return { ...prev, [category]: next };
-    });
-  }, [setFilters, setSearch]);
+    if (filters[category].includes(value)) {
+      removeFilter(category, value);
+    } else {
+      addFilter(category, value);
+    }
+  }, [addFilter, removeFilter, setSearch, filters]);
 
   const handleTypeClick = useCallback((t) => {
     toggleFilter("types", t);

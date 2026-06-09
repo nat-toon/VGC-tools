@@ -3,7 +3,7 @@ import Modal from "./Modal.jsx";
 import AbilityDetail from "./AbilityDetail.jsx";
 import VirtualTable from "./VirtualTable.jsx";
 import { getAllAbilities, isAbilityLegal } from "../lib/abilities.js";
-import { applySearchText, sortByNameAsc } from "../lib/utils.js";
+import { sortByNameAsc, buildAliasSet, matchesAlias } from "../lib/utils.js";
 
 const ROW_HEIGHT = 44;
 
@@ -29,7 +29,11 @@ export default function AbilitiesList({ regulation, search, allPokemon = [] }) {
   }, [regulation]);
 
   const filtered = useMemo(() => {
-    const searched = applySearchText(items, search);
+    const { q, aliasSet } = buildAliasSet(search);
+    const searched = items.filter((a) => {
+      if (!q) return true;
+      return matchesAlias(a, q, aliasSet);
+    });
     if (!sortKey) return searched.sort(sortByNameAsc);
     const [field, dir] = sortKey.split("-");
     const desc = dir === "desc" ? -1 : 1;

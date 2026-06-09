@@ -1,11 +1,12 @@
-export default function SearchInput({
-  value,
-  onChange,
-  className = "",
-  style,
-}) {
+import { forwardRef } from "react";
+
+const SearchInput = forwardRef(function SearchInput(
+  { value, onChange, className = "", style },
+  ref
+) {
   return (
     <input
+      ref={ref}
       className={className}
       style={style}
       type="text"
@@ -14,4 +15,6 @@ export default function SearchInput({
       onChange={(e) => onChange(e.target.value)}
     />
   );
-}
+});
+
+export default SearchInput;

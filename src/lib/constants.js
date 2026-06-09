@@ -18,3 +18,17 @@ export const STAT_CONFIG = [
   { key: "spd", label: "SPD", max: 255 },
   { key: "spe", label: "SPE", max: 255 },
 ];
+
+export const TYPES = [
+  "normal", "fire", "water", "electric", "grass", "ice",
+  "fighting", "poison", "ground", "flying", "psychic", "bug",
+  "rock", "ghost", "dragon", "dark", "steel", "fairy",
+];
+
+export const CATEGORIES = ["Physical", "Special", "Status"];
+
+export const CATEGORY_COLORS = {
+  physical: "#ed6744",
+  special: "#60acf1",
+  status: "#959899",
+};
