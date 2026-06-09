@@ -56,6 +56,27 @@ header h1 {
     letter-spacing: 0.3px;
     font-weight: 700;
 }
+header nav {
+    display: flex;
+    gap: 4px;
+}
+header nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background 0.1s, color 0.1s;
+}
+header nav a:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
+}
+header nav a.active {
+    color: var(--text);
+    background: var(--panel);
+}
 
 /* ---------- Main ---------- */
 main {
@@ -1403,4 +1424,24 @@ main {
 }
 .global-search-row.filter-active {
     background: rgba(93, 139, 245, 0.08);
+}
+
+/* ---------- Placeholder Pages ---------- */
+.placeholder-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+.placeholder-page h2 {
+    margin: 0 0 12px;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+}
+.placeholder-text {
+    color: var(--muted);
+    font-size: 15px;
 }
