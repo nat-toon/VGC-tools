@@ -67,7 +67,6 @@ const ItemGridRow = memo(function ItemGridRow({ i }) {
   const icon = getItemIcon(i.spritenum);
   return (
     <>
-      <div className="vt-cell vt-num"></div>
       <div className="vt-cell vt-sprite">
         {icon ? <Icon className="item-row-icon" icon={icon} /> : null}
       </div>
@@ -124,7 +123,6 @@ export default function ItemsList({ regulation, search, allPokemon = [] }) {
   const headers = useMemo(() => {
     if (isSearching) return [];
     return [
-      { nosort: true },
       { nosort: true },
       { label: "Name", onClick: () => cycleSort("name"), active: sortKey?.startsWith("name"), arrow: sortArrow("name") },
       { nosort: true, label: "Description" },

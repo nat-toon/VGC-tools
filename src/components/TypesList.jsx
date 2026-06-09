@@ -17,7 +17,6 @@ const TYPES = [
 const TypeGridRow = memo(function TypeGridRow({ t }) {
   return (
     <>
-      <div className="vt-cell vt-num"></div>
       <div className="vt-cell vt-sprite">
         <TypeIcon type={t} size={28} />
       </div>
@@ -52,7 +51,6 @@ export default function TypesList({ allPokemon, regulation, search }) {
   const renderItem = useCallback((t) => <TypeGridRow t={t} />, []);
 
   const headers = useMemo(() => [
-    { nosort: true },
     { nosort: true },
     { nosort: true, label: "Name" },
   ], []);

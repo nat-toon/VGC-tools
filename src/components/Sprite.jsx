@@ -1,4 +1,4 @@
-export default function Sprite({ sprite, className, alt, loading = "lazy" }) {
+export default function Sprite({ sprite, className, alt, loading = "lazy", onError }) {
   if (!sprite) return null;
   const style = sprite.pixelated ? { imageRendering: "pixelated" } : undefined;
   return (
@@ -10,6 +10,7 @@ export default function Sprite({ sprite, className, alt, loading = "lazy" }) {
       alt={alt}
       loading={loading}
       style={style}
+      onError={onError}
     />
   );
 }

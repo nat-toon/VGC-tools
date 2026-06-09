@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import Sprite from "./Sprite.jsx";
+import Icon from "./Icon.jsx";
 import TypeIcon from "./TypeIcon.jsx";
 import CategoryIcon from "./CategoryIcon.jsx";
 import Modal from "./Modal.jsx";
 import AbilityDetail from "./AbilityDetail.jsx";
 import MoveDetail from "./MoveDetail.jsx";
-import { getLargeSprite } from "../lib/sprite.js";
+import { getLargeSprite, getIcon } from "../lib/sprite.js";
 import { getAbilityByName } from "../lib/abilities.js";
 import { getMovesWithDetails } from "../lib/learnsets.js";
 import { STAT_CONFIG } from "../lib/constants.js";
@@ -18,6 +19,9 @@ export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
   const [selectedMove, setSelectedMove] = useState(null);
 
   const sprite = useMemo(() => getLargeSprite(pokemon), [pokemon]);
+  const fallbackIcon = useMemo(() => getIcon(pokemon), [pokemon]);
+  const [spriteFailed, setSpriteFailed] = useState(false);
+  const handleSpriteError = useCallback(() => setSpriteFailed(true), []);
   const abilities = useMemo(
     () =>
       (pokemon.abilities || []).map((a) => ({
@@ -58,7 +62,11 @@ export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
     <div className="entry">
       <header className="entry-header">
         <div className="entry-sprite-wrap">
-          {sprite && <Sprite sprite={sprite} className="entry-sprite" alt={pokemon.name} loading="eager" />}
+          {sprite && !spriteFailed ? (
+            <Sprite sprite={sprite} className="entry-sprite" alt={pokemon.name} loading="eager" onError={handleSpriteError} />
+          ) : (
+            fallbackIcon && <Icon className="entry-sprite-icon" icon={fallbackIcon} style={{...fallbackIcon.css, width: 96, height: 72}} />
+          )}
         </div>
         <div className="entry-headline">
           <div className="entry-num">#{String(pokemon.num).padStart(4, "0")}</div>

@@ -10,7 +10,6 @@ const ROW_HEIGHT = 44;
 const AbilityGridRow = memo(function AbilityGridRow({ a }) {
   return (
     <>
-      <div className="vt-cell vt-num"></div>
       <div className="vt-cell vt-sprite"></div>
       <div className="vt-cell vt-name">{a.name}</div>
       <div className="vt-cell vt-desc">{a.shortDesc || a.desc || "—"}</div>
@@ -61,7 +60,6 @@ export default function AbilitiesList({ regulation, search, allPokemon = [] }) {
   const renderItem = useCallback((a) => <AbilityGridRow a={a} />, []);
 
   const headers = useMemo(() => [
-    { nosort: true },
     { nosort: true },
     { label: "Name", onClick: () => cycleSort("name"), active: sortKey?.startsWith("name"), arrow: sortArrow("name") },
     { nosort: true, label: "Description" },

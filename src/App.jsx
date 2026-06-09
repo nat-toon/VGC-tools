@@ -3,6 +3,7 @@ import Header from "./components/Header.jsx";
 import SearchInput from "./components/SearchInput.jsx";
 import ViewSelector from "./components/ViewSelector.jsx";
 import TypeIcon from "./components/TypeIcon.jsx";
+import CategoryIcon from "./components/CategoryIcon.jsx";
 import { getMove } from "./lib/moves.js";
 
 const Pokedex = lazy(() => import("./components/Pokedex.jsx"));
@@ -17,6 +18,12 @@ import { loadLearnsets } from "./lib/learnsets.js";
 import { REGULATIONS, DEFAULT_REG } from "./lib/regulations.js";
 import { REG_KEY } from "./lib/constants.js";
 
+const CATEGORY_COLORS = {
+  physical: "#ed6744",
+  special: "#60acf1",
+  status: "#959899",
+};
+
 export default function App() {
   const [allPokemon, setAllPokemon] = useState([]);
   const [allPokemonLoaded, setAllPokemonLoaded] = useState(false);
@@ -28,9 +35,9 @@ export default function App() {
   });
   const [view, setView] = useState("pokemon");
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ types: [], moves: [], abilities: [] });
+  const [filters, setFilters] = useState({ types: [], moves: [], abilities: [], categories: [], moveTypes: [] });
 
-  const hasActiveFilters = filters.types.length > 0 || filters.moves.length > 0 || filters.abilities.length > 0;
+  const hasActiveFilters = filters.types.length > 0 || filters.moves.length > 0 || filters.abilities.length > 0 || filters.categories.length > 0 || filters.moveTypes.length > 0;
 
   const removeFilter = useCallback((category, value) => {
     setFilters((prev) => ({
@@ -40,7 +47,7 @@ export default function App() {
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters({ types: [], moves: [], abilities: [] });
+    setFilters({ types: [], moves: [], abilities: [], categories: [], moveTypes: [] });
   }, []);
 
   useEffect(() => {
@@ -112,6 +119,18 @@ export default function App() {
                 <span className="filter-chip-label">{a}</span>
               </span>
             ))}
+            {filters.categories.map((c) => (
+              <span key={`category-${c}`} className="filter-chip filter-chip-category" onClick={() => removeFilter("categories", c)} role="button" tabIndex={0}>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "3px", background: CATEGORY_COLORS[c.toLowerCase()] || "transparent", padding: "1px 3px" }}>
+                  <CategoryIcon category={c} width={16} />
+                </span>
+              </span>
+            ))}
+            {filters.moveTypes.map((t) => (
+              <span key={`movetype-${t}`} className="filter-chip filter-chip-type" onClick={() => removeFilter("moveTypes", t)} role="button" tabIndex={0}>
+                <TypeIcon type={t} size={16} />
+              </span>
+            ))}
             <button className="filter-clear-all" onClick={clearFilters}>Clear all</button>
           </div>
         )}
@@ -122,7 +141,7 @@ export default function App() {
           <div className="loading-text">Loading…</div>
         ) : (
           <Suspense fallback={<div className="loading-text">Loading…</div>}>
-          {isSearching && view !== "items" ? (
+          {isSearching && view === "pokemon" ? (
             <GlobalSearch
               allPokemon={allPokemon}
               regulation={regulation}
@@ -157,7 +176,7 @@ export default function App() {
                 />
               )}
               {view === "moves" && (
-                <MovesList regulation={regulation} search={search} allPokemon={allPokemon} onViewChange={setView} />
+                <MovesList regulation={regulation} search={search} allPokemon={allPokemon} onViewChange={setView} filters={filters} setFilters={setFilters} setSearch={setSearch} />
               )}
               {view === "items" && (
                 <ItemsList regulation={regulation} search={search} allPokemon={allPokemon} />

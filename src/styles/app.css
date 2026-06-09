@@ -501,6 +501,10 @@ main {
     width: 96px;
     height: 96px;
 }
+.entry-sprite-icon {
+    display: block;
+    image-rendering: pixelated;
+}
 .entry-headline {
     display: flex;
     flex-direction: column;
@@ -1094,23 +1098,23 @@ main {
 /* Virtual table grid templates */
 .vt-header.pkmn-grid,
 .vt-row.pkmn-grid {
-    grid-template-columns: 64px 48px 240px 72px repeat(6, 36px) 54px 1fr 1fr;
+    grid-template-columns: 64px 56px 240px 72px repeat(6, 36px) 54px 1fr 1fr;
 }
 .vt-header.moves-grid,
 .vt-row.moves-grid {
-    grid-template-columns: 64px 48px 160px 56px 56px 44px 56px 1fr;
+    grid-template-columns: 48px 160px 56px 56px 44px 56px 1fr;
 }
 .vt-header.items-grid,
 .vt-row.items-grid {
-    grid-template-columns: 64px 48px 160px 1fr;
+    grid-template-columns: 48px 160px 1fr;
 }
 .vt-header.abilities-grid,
 .vt-row.abilities-grid {
-    grid-template-columns: 64px 48px 160px 1fr;
+    grid-template-columns: 48px 160px 1fr;
 }
 .vt-header.types-grid,
 .vt-row.types-grid {
-    grid-template-columns: 64px 48px 1fr;
+    grid-template-columns: 48px 1fr;
 }
 
 /* ---------- Pokedex table inside detail modals ---------- */
@@ -1377,6 +1381,10 @@ main {
 .filter-chip-ability {
     border-color: #6b3d80;
     background: rgba(107, 61, 128, 0.15);
+}
+.filter-chip-category {
+    border-color: #806b3d;
+    background: rgba(128, 107, 61, 0.15);
 }
 .filter-clear-all {
     padding: 5px 10px;
