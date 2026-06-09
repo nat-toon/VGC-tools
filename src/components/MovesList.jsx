@@ -8,8 +8,7 @@ import SectionHeader from "./SectionHeader.jsx";
 import { getAllMoves, isMoveLegal } from "../lib/moves.js";
 import { formatAcc, formatPower, buildAliasSet, matchesAlias } from "../lib/utils.js";
 import { TYPES, CATEGORIES, CATEGORY_COLORS } from "../lib/constants.js";
-
-const ROW_HEIGHT = 44;
+import { useRowHeight } from "../lib/hooks.js";
 
 function sortItems(items, sortKey) {
   if (!sortKey) {
@@ -38,65 +37,34 @@ function sortItems(items, sortKey) {
   });
 }
 
-const CategorySearchRow = memo(function CategorySearchRow({ cat, active }) {
-  const bg = CATEGORY_COLORS[cat.toLowerCase()] || "transparent";
+const CategoryGridRow = memo(function CategoryGridRow({ cat }) {
   return (
-    <div className={`global-search-row${active ? " filter-active" : ""}`} style={{ display: "grid", gridTemplateColumns: "48px 1fr", alignItems: "center", gap: "8px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "4px", background: bg, padding: "2px 6px" }}>
-          <CategoryIcon category={cat} width={28} />
-        </span>
+    <>
+      <div className="vt-cell vt-spacer"></div>
+      <div className="vt-cell vt-sprite">
+        <CategoryIcon category={cat} width={28} />
       </div>
       <div className="vt-cell vt-name">{cat}</div>
-    </div>
+    </>
   );
 });
 
-const MoveSearchRow = memo(function MoveSearchRow({ m }) {
+const TypeGridRow = memo(function TypeGridRow({ t }) {
   return (
-    <div className="global-search-row" style={{ display: "grid", gridTemplateColumns: "48px 160px 56px 56px 44px 56px 1fr", alignItems: "center", gap: "8px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <TypeIcon type={m.type} size={28} />
-      </div>
-      <div className="vt-cell vt-name move-name">{m.name}</div>
-      <div className="vt-cell vt-cat">
-        {m.category ? (
-          <span className="entry-move-cat" data-category={String(m.category).toLowerCase()}>
-            <CategoryIcon category={m.category} width={20} />
-          </span>
-        ) : null}
-      </div>
-      <div className="vt-cell vt-move-stat" data-no-power={(m.category || "").toLowerCase() === "status" || undefined}>
-        <span className="move-stat-label">BP</span>
-        <span className="move-stat-value">{formatPower(m.basePower)}</span>
-      </div>
-      <div className="vt-cell vt-move-stat">
-        <span className="move-stat-label">PP</span>
-        <span className="move-stat-value">{m.pp ?? "\u2014"}</span>
-      </div>
-      <div className="vt-cell vt-move-stat">
-        <span className="move-stat-label">Acc</span>
-        <span className="move-stat-value">{formatAcc(m.accuracy)}</span>
-      </div>
-      <div className="vt-cell vt-desc">{m.shortDesc || m.desc || "\u2014"}</div>
-    </div>
-  );
-});
-
-const TypeSearchRow = memo(function TypeSearchRow({ t, active }) {
-  return (
-    <div className={`global-search-row${active ? " filter-active" : ""}`} style={{ display: "grid", gridTemplateColumns: "48px 1fr", alignItems: "center", gap: "8px" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <>
+      <div className="vt-cell vt-spacer"></div>
+      <div className="vt-cell vt-sprite">
         <TypeIcon type={t} size={28} />
       </div>
       <div className="vt-cell vt-name">{t}</div>
-    </div>
+    </>
   );
 });
 
 const MoveGridRow = memo(function MoveGridRow({ m }) {
   return (
     <>
+      <div className="vt-cell vt-spacer"></div>
       <div className="vt-cell vt-sprite">
         <TypeIcon type={m.type} size={28} />
       </div>
@@ -128,6 +96,7 @@ const MoveGridRow = memo(function MoveGridRow({ m }) {
 export default function MovesList({ regulation, search, allPokemon = [], onViewChange, filters, addFilter, removeFilter, setSearch }) {
   const [sortKey, setSortKey] = useState("");
   const [selected, setSelected] = useState(null);
+  const rowHeight = useRowHeight();
 
   const items = useMemo(() => {
     const all = getAllMoves();
@@ -192,17 +161,17 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
     setSelected((cur) => (cur && cur._key === m._key ? null : m));
   }, []);
 
-  function cycleSort(field) {
+  const cycleSort = useCallback((field) => {
     setSortKey((cur) => {
       if (!cur || !cur.startsWith(field)) return field + "-asc";
       return cur.split("-")[1] === "asc" ? field + "-desc" : "";
     });
-  }
+  }, []);
 
-  function sortArrow(field) {
+  const sortArrow = useCallback((field) => {
     if (!sortKey?.startsWith(field)) return null;
     return sortKey.split("-")[1] === "asc" ? "\u25B2" : "\u25BC";
-  }
+  }, [sortKey]);
 
   const getKey = useCallback((m) => m._key, []);
 
@@ -212,7 +181,15 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
 
   const renderItem = useCallback((m) => <MoveGridRow m={m} />, []);
 
+  const renderCategoryRow = useCallback((cat) => <CategoryGridRow cat={cat} />, []);
+  const renderTypeRow = useCallback((t) => <TypeGridRow t={t} />, []);
+  const renderMoveRow = useCallback((m) => <MoveGridRow m={m} />, []);
+  const getCategoryKey = useCallback((cat) => cat, []);
+  const getTypeKey = useCallback((t) => t, []);
+  const getMoveKey = useCallback((m) => m._key, []);
+
   const headers = useMemo(() => [
+    { nosort: true },
     { label: "Type", onClick: () => onViewChange?.("types") },
     { label: "Name", onClick: () => cycleSort("name"), active: sortKey?.startsWith("name"), arrow: sortArrow("name") },
     { nosort: true, label: "Cat" },
@@ -220,20 +197,49 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
     { label: "PP", onClick: () => cycleSort("pp"), active: sortKey?.startsWith("pp"), arrow: sortArrow("pp") },
     { label: "Acc", onClick: () => cycleSort("accuracy"), active: sortKey?.startsWith("accuracy"), arrow: sortArrow("accuracy") },
     { nosort: true, label: "Description" },
-  ], [sortKey, onViewChange]);
+  ], [sortKey, onViewChange, cycleSort, sortArrow]);
 
   if (isSearching) {
+    const categoryHeaders = [
+      { nosort: true },
+      { nosort: true },
+      { nosort: true, label: "Name" },
+    ];
+
+    const typeHeaders = [
+      { nosort: true },
+      { nosort: true },
+      { nosort: true, label: "Name" },
+    ];
+
+    const moveSearchHeaders = [
+      { nosort: true },
+      { nosort: true },
+      { nosort: true, label: "Name" },
+      { nosort: true, label: "Cat" },
+      { nosort: true, label: "BP" },
+      { nosort: true, label: "PP" },
+      { nosort: true, label: "Acc" },
+      { nosort: true, label: "Description" },
+    ];
+
     return (
       <div className="global-search tab-panel active">
         {matchingCategories.length > 0 && (
           <div className="global-search-section">
             <SectionHeader label="Categories" count={matchingCategories.length} />
             <div className="global-search-results">
-              {matchingCategories.map((cat) => (
-                <div key={cat} onClick={() => handleCategoryClick(cat)} role="button" tabIndex={0}>
-                  <CategorySearchRow cat={cat} active={filters.categories.includes(cat)} />
-                </div>
-              ))}
+              <VirtualTable
+                headers={categoryHeaders}
+                gridClass="types-grid"
+                items={matchingCategories}
+                rowHeight={44}
+                renderItem={renderCategoryRow}
+                selectedKey={null}
+                getKey={getCategoryKey}
+                onSelect={handleCategoryClick}
+                emptyText=""
+              />
             </div>
           </div>
         )}
@@ -242,11 +248,17 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
           <div className="global-search-section">
             <SectionHeader label="Moves" count={matchingMoves.length} />
             <div className="global-search-results">
-              {matchingMoves.map((m) => (
-                <div key={m._key} onClick={() => handleMoveClick(m)} role="button" tabIndex={0}>
-                  <MoveSearchRow m={m} />
-                </div>
-              ))}
+              <VirtualTable
+                headers={moveSearchHeaders}
+                gridClass="moves-grid"
+                items={matchingMoves}
+                rowHeight={rowHeight}
+                renderItem={renderMoveRow}
+                selectedKey={selected?._key}
+                getKey={getMoveKey}
+                onSelect={handleMoveClick}
+                emptyText=""
+              />
             </div>
           </div>
         )}
@@ -255,11 +267,17 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
           <div className="global-search-section">
             <SectionHeader label="Types" count={matchingTypes.length} />
             <div className="global-search-results">
-              {matchingTypes.map((t) => (
-                <div key={t} onClick={() => handleTypeClick(t)} role="button" tabIndex={0}>
-                  <TypeSearchRow t={t} active={filters.moveTypes.includes(t)} />
-                </div>
-              ))}
+              <VirtualTable
+                headers={typeHeaders}
+                gridClass="types-grid"
+                items={matchingTypes}
+                rowHeight={44}
+                renderItem={renderTypeRow}
+                selectedKey={null}
+                getKey={getTypeKey}
+                onSelect={handleTypeClick}
+                emptyText=""
+              />
             </div>
           </div>
         )}
@@ -281,7 +299,7 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
         headers={headers}
         gridClass="moves-grid"
         items={filtered}
-        rowHeight={ROW_HEIGHT}
+        rowHeight={rowHeight}
         renderItem={renderItem}
         selectedKey={selected?._key}
         getKey={getKey}

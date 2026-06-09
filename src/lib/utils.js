@@ -28,17 +28,6 @@ export function sortArrow(sortKey, field) {
   return sortKey.split("-")[1] === "asc" ? "▲" : "▼";
 }
 
-export function createSortFromKey(fieldSorters) {
-  return (items, sortKey) => {
-    if (!sortKey) return items;
-    const [field, dir] = sortKey.split("-");
-    const desc = dir === "desc" ? -1 : 1;
-    const sorter = fieldSorters[field];
-    if (!sorter) return items;
-    return items.slice().sort((a, b) => desc * sorter(a, b));
-  };
-}
-
 export function formatAcc(value) {
   if (value === true) return "\u2014";
   if (value == null) return "\u2014";

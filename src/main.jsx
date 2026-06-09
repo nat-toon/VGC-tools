@@ -7,10 +7,23 @@ import './styles/types.css';
 import './styles/categories.css';
 
 function adjustWidthVar() {
-  document.documentElement.style.setProperty('--windowWidth', window.innerWidth);
+  const root = document.querySelector(':root');
+  const tableWrap = document.querySelector('.modal-table-wrap');
+  if (tableWrap) {
+    const width = tableWrap.parentElement.clientWidth;
+    root.style.setProperty('--tableWidth', width);
+  }
 }
-adjustWidthVar();
+
+const observer = new MutationObserver(() => adjustWidthVar());
+observer.observe(document.body, { childList: true, subtree: true, attributeFilter: ['class'] });
 window.addEventListener('resize', adjustWidthVar);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js');
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

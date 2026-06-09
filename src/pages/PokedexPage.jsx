@@ -29,42 +29,35 @@ export default function PokedexPage() {
   });
   const [view, setView] = useState("pokemon");
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ types: [], moves: [], abilities: [], categories: [], moveTypes: [] });
-  const [filterOrder, setFilterOrder] = useState([]);
+  const [filterEntries, setFilterEntries] = useState([]);
 
-  const hasActiveFilters = filters.types.length > 0 || filters.moves.length > 0 || filters.abilities.length > 0 || filters.categories.length > 0 || filters.moveTypes.length > 0;
+  const filters = {
+    types: filterEntries.filter((e) => e.category === "types").map((e) => e.value),
+    moves: filterEntries.filter((e) => e.category === "moves").map((e) => e.value),
+    abilities: filterEntries.filter((e) => e.category === "abilities").map((e) => e.value),
+    categories: filterEntries.filter((e) => e.category === "categories").map((e) => e.value),
+    moveTypes: filterEntries.filter((e) => e.category === "moveTypes").map((e) => e.value),
+  };
+
+  const hasActiveFilters = filterEntries.length > 0;
 
   const addFilter = useCallback((category, value) => {
-    setFilters((prev) => {
-      if (prev[category].includes(value)) return prev;
-      return { ...prev, [category]: [...prev[category], value] };
+    setFilterEntries((prev) => {
+      if (prev.some((e) => e.category === category && e.value === value)) return prev;
+      return [...prev, { category, value }];
     });
-    setFilterOrder((prev) => [...prev, { category, value }]);
   }, []);
 
   const removeFilter = useCallback((category, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [category]: prev[category].filter((v) => v !== value),
-    }));
-    setFilterOrder((prev) => prev.filter((f) => !(f.category === category && f.value === value)));
+    setFilterEntries((prev) => prev.filter((e) => !(e.category === category && e.value === value)));
   }, []);
 
   const removeMostRecentFilter = useCallback(() => {
-    setFilterOrder((prev) => {
-      if (prev.length === 0) return prev;
-      const last = prev[prev.length - 1];
-      setFilters((p) => ({
-        ...p,
-        [last.category]: p[last.category].filter((v) => v !== last.value),
-      }));
-      return prev.slice(0, -1);
-    });
+    setFilterEntries((prev) => prev.slice(0, -1));
   }, []);
 
   const clearFilters = useCallback(() => {
-    setFilters({ types: [], moves: [], abilities: [], categories: [], moveTypes: [] });
-    setFilterOrder([]);
+    setFilterEntries([]);
   }, []);
 
   useEffect(() => {

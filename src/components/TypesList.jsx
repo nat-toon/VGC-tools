@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState, useEffect } from "react";
 import TypeIcon from "./TypeIcon.jsx";
 import Modal from "./Modal.jsx";
 import PokedexTable from "./PokedexTable.jsx";
@@ -7,11 +7,28 @@ import { getPool } from "../lib/regulations.js";
 import { applySearchPokemon, sortByNumAsc } from "../lib/utils.js";
 import { TYPES } from "../lib/constants.js";
 
-const ROW_HEIGHT = 44;
+const TYPES_ROW_HEIGHT_DESKTOP = 44;
+const TYPES_ROW_HEIGHT_MOBILE = 28;
+
+function useTypesRowHeight() {
+  const [height, setHeight] = useState(() =>
+    window.innerWidth <= 768 ? TYPES_ROW_HEIGHT_MOBILE : TYPES_ROW_HEIGHT_DESKTOP
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)");
+    const handler = (e) => setHeight(e.matches ? TYPES_ROW_HEIGHT_MOBILE : TYPES_ROW_HEIGHT_DESKTOP);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+
+  return height;
+}
 
 const TypeGridRow = memo(function TypeGridRow({ t }) {
   return (
     <>
+      <div className="vt-cell vt-spacer"></div>
       <div className="vt-cell vt-sprite">
         <TypeIcon type={t} size={28} />
       </div>
@@ -22,6 +39,7 @@ const TypeGridRow = memo(function TypeGridRow({ t }) {
 
 export default function TypesList({ allPokemon, regulation, search }) {
   const [selected, setSelected] = useState(null);
+  const rowHeight = useTypesRowHeight();
 
   const regPool = useMemo(() => getPool(allPokemon, regulation), [allPokemon, regulation]);
 
@@ -47,6 +65,7 @@ export default function TypesList({ allPokemon, regulation, search }) {
 
   const headers = useMemo(() => [
     { nosort: true },
+    { nosort: true },
     { nosort: true, label: "Name" },
   ], []);
 
@@ -56,7 +75,7 @@ export default function TypesList({ allPokemon, regulation, search }) {
         headers={headers}
         gridClass="types-grid"
         items={types}
-        rowHeight={ROW_HEIGHT}
+        rowHeight={rowHeight}
         renderItem={renderItem}
         selectedKey={selected}
         getKey={getKey}

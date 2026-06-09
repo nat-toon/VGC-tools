@@ -7,8 +7,7 @@ import { getAllItems, isItemLegal } from "../lib/items.js";
 import { getItemIcon } from "../lib/sprite.js";
 import { getPool } from "../lib/regulations.js";
 import { sortByNameAsc, buildAliasSet, matchesAlias } from "../lib/utils.js";
-
-const ROW_HEIGHT = 44;
+import { useRowHeight } from "../lib/hooks.js";
 
 function extractItemPokemonName(item) {
   const desc = item.desc || item.shortDesc || "";
@@ -67,6 +66,7 @@ const ItemGridRow = memo(function ItemGridRow({ i }) {
   const icon = getItemIcon(i.spritenum);
   return (
     <>
+      <div className="vt-cell vt-spacer"></div>
       <div className="vt-cell vt-sprite">
         {icon ? <Icon className="item-row-icon" icon={icon} /> : null}
       </div>
@@ -79,6 +79,7 @@ const ItemGridRow = memo(function ItemGridRow({ i }) {
 export default function ItemsList({ regulation, search, allPokemon = [] }) {
   const [sortKey, setSortKey] = useState("");
   const [selected, setSelected] = useState(null);
+  const rowHeight = useRowHeight();
 
   const items = useMemo(() => {
     const all = getAllItems();
@@ -102,17 +103,17 @@ export default function ItemsList({ regulation, search, allPokemon = [] }) {
     });
   }, [items, search, sortKey]);
 
-  function cycleSort(field) {
+  const cycleSort = useCallback((field) => {
     setSortKey((cur) => {
       if (!cur || !cur.startsWith(field)) return field + "-asc";
       return cur.split("-")[1] === "asc" ? field + "-desc" : "";
     });
-  }
+  }, []);
 
-  function sortArrow(field) {
+  const sortArrow = useCallback((field) => {
     if (!sortKey?.startsWith(field)) return null;
     return sortKey.split("-")[1] === "asc" ? "▲" : "▼";
-  }
+  }, [sortKey]);
 
   const getKey = useCallback((i) => i._key, []);
 
@@ -128,10 +129,11 @@ export default function ItemsList({ regulation, search, allPokemon = [] }) {
     if (isSearching) return [];
     return [
       { nosort: true },
+      { nosort: true },
       { label: "Name", onClick: () => cycleSort("name"), active: sortKey?.startsWith("name"), arrow: sortArrow("name") },
       { nosort: true, label: "Description" },
     ];
-  }, [sortKey, isSearching]);
+  }, [sortKey, isSearching, cycleSort, sortArrow]);
 
   return (
     <div className="tab-panel active" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
@@ -139,7 +141,7 @@ export default function ItemsList({ regulation, search, allPokemon = [] }) {
         headers={headers}
         gridClass="items-grid"
         items={filtered}
-        rowHeight={ROW_HEIGHT}
+        rowHeight={rowHeight}
         renderItem={renderItem}
         selectedKey={selected?._key}
         getKey={getKey}

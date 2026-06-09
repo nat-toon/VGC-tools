@@ -1,15 +1,67 @@
-import { useState } from "react";
-import PokemonRow from "./PokemonRow.jsx";
+import { memo, useCallback, useMemo, useState } from "react";
+import TypeIcon from "./TypeIcon.jsx";
+import Icon from "./Icon.jsx";
 import Modal from "./Modal.jsx";
 import PokemonEntry from "./PokemonEntry.jsx";
 import { STAT_CONFIG } from "../lib/constants.js";
+import { bst, displayName } from "../lib/utils.js";
+import NameWithExt from "./NameWithExt.jsx";
+
+const PokemonGridRow = memo(function PokemonGridRow({ p }) {
+  const abilities = p.abilities || [];
+  const visibleAbilities = [];
+  const hiddenAbilities = [];
+  for (const a of abilities) {
+    if (a.hidden) hiddenAbilities.push(a);
+    else visibleAbilities.push(a);
+  }
+  const total = bst(p.baseStats);
+  return (
+    <>
+      <div className="vt-cell vt-num">#{String(p.num).padStart(4, "0")}</div>
+      <div className="vt-cell vt-sprite">
+        <Icon className="row-icon" icon={p.icon} />
+      </div>
+      <div className="vt-cell vt-name"><NameWithExt name={p.name} /></div>
+      <div className="vt-cell vt-types">
+        {(p.types || []).map((t) => (
+          <TypeIcon key={t} type={t} size={22} />
+        ))}
+      </div>
+      <div className="vt-cell vt-ab">
+        {visibleAbilities.length === 0
+          ? <span className="muted">—</span>
+          : visibleAbilities.map((a) => (
+              <span key={a.name} className="ab">{displayName(a.name)}</span>
+            ))}
+      </div>
+      <div className="vt-cell vt-ab">
+        {hiddenAbilities.length > 0 && hiddenAbilities.map((a) => (
+              <span key={a.name} className="ab hidden">{displayName(a.name)}</span>
+            ))}
+      </div>
+      {STAT_CONFIG.map(({ key, label }) => (
+        <div key={key} className="vt-cell vt-stat">
+          <div className="stat-cell-stack">
+            <span className="stat-cell-label">{label}</span>
+            <span className="stat-cell-value">{p.baseStats ? p.baseStats[key] : "?"}</span>
+          </div>
+        </div>
+      ))}
+      <div className="vt-cell vt-stat">
+        <div className="stat-cell-stack">
+          <span className="stat-cell-label">BST</span>
+          <span className="stat-cell-value">{total ?? "?"}</span>
+        </div>
+      </div>
+    </>
+  );
+});
 
 export default function PokedexTable({
   pokemon,
   regulation,
   allPokemon = [],
-  sortKey,
-  onHeaderClick,
   showEmpty = true,
 }) {
   const [entrySelected, setEntrySelected] = useState(null);
@@ -18,84 +70,31 @@ export default function PokedexTable({
     setEntrySelected((cur) => (cur && cur.key === p.key ? null : p));
   }
 
-  function handleCloseEntry() {
-    setEntrySelected(null);
-  }
-
-  function sortArrow(field) {
-    if (!sortKey || !sortKey.startsWith(field)) return null;
-    return sortKey.split("-")[1] === "asc" ? "▲" : "▼";
-  }
-
-  function headerClick(field) {
-    if (onHeaderClick) onHeaderClick(field);
-  }
-
-  function headerClass(field, base) {
-    if (!sortKey) return base;
-    return `${base} ${sortKey.startsWith(field) ? "active" : ""}`;
-  }
-
   if (pokemon.length === 0) {
     if (showEmpty) return <div className="empty-state">No Pokemon match.</div>;
     return null;
   }
 
-  const isRowSelected = (p) => entrySelected && entrySelected.key === p.key;
+  const getKey = (p) => p.key;
 
   return (
     <>
-      <div className="table-wrap">
-        <table className="pkmn-table">
-          <thead>
-            <tr>
-              <th
-                className={headerClass("num", "th-num")}
-                onClick={() => headerClick("num")}
-              >
-                # {sortArrow("num")}
-              </th>
-              <th className="th-sprite"></th>
-              <th
-                className={headerClass("name", "th-name")}
-                onClick={() => headerClick("name")}
-              >
-                Name {sortArrow("name")}
-              </th>
-              <th className="th-type">Type</th>
-              {STAT_CONFIG.map(({ key, label }) => (
-                <th
-                  key={key}
-                  className={headerClass(key, "th-stat")}
-                  onClick={() => headerClick(key)}
-                >
-                  {label} {sortArrow(key)}
-                </th>
-              ))}
-              <th
-                className={headerClass("bst", "th-bst")}
-                onClick={() => headerClick("bst")}
-              >
-                BST {sortArrow("bst")}
-              </th>
-              <th className="th-ab" colSpan="2">Abilities</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pokemon.map((p) => (
-              <PokemonRow
-                key={p.name}
-                pokemon={p}
-                selected={isRowSelected(p)}
-                onClick={handleRowClick}
-              />
-            ))}
-          </tbody>
-        </table>
+      <div className="modal-table-wrap">
+        {pokemon.map((p) => (
+          <div
+            key={p.key}
+            className={`vt-row pkmn-grid modal-table-row${entrySelected?.key === p.key ? " selected" : ""}`}
+            onClick={() => handleRowClick(p)}
+            tabIndex={0}
+            role="button"
+          >
+            <PokemonGridRow p={p} />
+          </div>
+        ))}
       </div>
       <Modal
         open={!!entrySelected}
-        onClose={handleCloseEntry}
+        onClose={() => setEntrySelected(null)}
         labelledBy="entry-name"
       >
         {entrySelected && (

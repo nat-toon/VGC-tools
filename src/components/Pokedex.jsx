@@ -8,8 +8,8 @@ import { getPool } from "../lib/regulations.js";
 import { getLearnset } from "../lib/learnsets.js";
 import { STAT_CONFIG } from "../lib/constants.js";
 import { bst, displayName, applySearchPokemon, cycleSort as utilCycleSort, sortArrow as utilSortArrow } from "../lib/utils.js";
-
-const ROW_HEIGHT = 44;
+import NameWithExt from "./NameWithExt.jsx";
+import { useRowHeight } from "../lib/hooks.js";
 
 function sortItems(items, sortKey) {
   if (!sortKey) {
@@ -29,8 +29,12 @@ function sortItems(items, sortKey) {
 
 const PokemonGridRow = memo(function PokemonGridRow({ p }) {
   const abilities = p.abilities || [];
-  const visibleAbilities = abilities.filter((a) => !a.hidden);
-  const hiddenAbilities = abilities.filter((a) => a.hidden);
+  const visibleAbilities = [];
+  const hiddenAbilities = [];
+  for (const a of abilities) {
+    if (a.hidden) hiddenAbilities.push(a);
+    else visibleAbilities.push(a);
+  }
   const total = bst(p.baseStats);
   return (
     <>
@@ -38,11 +42,23 @@ const PokemonGridRow = memo(function PokemonGridRow({ p }) {
       <div className="vt-cell vt-sprite">
         <Icon className="row-icon" icon={p.icon} />
       </div>
-      <div className="vt-cell vt-name">{p.name}</div>
+      <div className="vt-cell vt-name"><NameWithExt name={p.name} /></div>
       <div className="vt-cell vt-types">
         {(p.types || []).map((t) => (
           <TypeIcon key={t} type={t} size={22} />
         ))}
+      </div>
+      <div className="vt-cell vt-ab">
+        {visibleAbilities.length === 0
+          ? <span className="muted">—</span>
+          : visibleAbilities.map((a) => (
+              <span key={a.name} className="ab">{displayName(a.name)}</span>
+            ))}
+      </div>
+      <div className="vt-cell vt-ab">
+        {hiddenAbilities.length > 0 && hiddenAbilities.map((a) => (
+              <span key={a.name} className="ab hidden">{displayName(a.name)}</span>
+            ))}
       </div>
       {STAT_CONFIG.map(({ key, label }) => (
         <div key={key} className="vt-cell vt-stat">
@@ -58,20 +74,6 @@ const PokemonGridRow = memo(function PokemonGridRow({ p }) {
           <span className="stat-cell-value">{total ?? "?"}</span>
         </div>
       </div>
-      <div className="vt-cell vt-ab">
-        {visibleAbilities.length === 0
-          ? <span className="muted">—</span>
-          : visibleAbilities.map((a) => (
-              <span key={a.name} className="ab">{displayName(a.name)}</span>
-            ))}
-      </div>
-      <div className="vt-cell vt-ab">
-        {hiddenAbilities.length === 0
-          ? <span className="muted">—</span>
-          : hiddenAbilities.map((a) => (
-              <span key={a.name} className="ab hidden">{displayName(a.name)}</span>
-            ))}
-      </div>
     </>
   );
 });
@@ -79,6 +81,7 @@ const PokemonGridRow = memo(function PokemonGridRow({ p }) {
 export default function Pokedex({ allPokemon, regulation, search, filters, onViewChange }) {
   const [sortKey, setSortKey] = useState("");
   const [selected, setSelected] = useState(null);
+  const rowHeight = useRowHeight();
 
   const regPool = useMemo(() => getPool(allPokemon, regulation), [allPokemon, regulation]);
 
@@ -109,17 +112,17 @@ export default function Pokedex({ allPokemon, regulation, search, filters, onVie
     return sortItems(pool, sortKey);
   }, [regPool, search, sortKey, filters, regulation]);
 
-  function cycleSort(field) {
+  const cycleSort = useCallback((field) => {
     setSortKey((cur) => {
       if (!cur || !cur.startsWith(field)) return field + "-asc";
       return cur.split("-")[1] === "asc" ? field + "-desc" : "";
     });
-  }
+  }, []);
 
-  function sortArrow(field) {
+  const sortArrow = useCallback((field) => {
     if (!sortKey || !sortKey.startsWith(field)) return null;
     return sortKey.split("-")[1] === "asc" ? "▲" : "▼";
-  }
+  }, [sortKey]);
 
   const getKey = useCallback((p) => p.key, []);
 
@@ -134,12 +137,12 @@ export default function Pokedex({ allPokemon, regulation, search, filters, onVie
     { nosort: true },
     { label: "Name", onClick: () => cycleSort("name"), active: sortKey?.startsWith("name"), arrow: sortArrow("name") },
     { label: "Type", className: "text-left", onClick: () => onViewChange?.("types") },
+    { label: "Abilities", style: { gridColumn: "span 2" }, onClick: () => onViewChange?.("abilities") },
     ...STAT_CONFIG.map(({ key, label }) => ({
       label, onClick: () => cycleSort(key), active: sortKey?.startsWith(key), arrow: sortArrow(key),
     })),
     { label: "BST", onClick: () => cycleSort("bst"), active: sortKey?.startsWith("bst"), arrow: sortArrow("bst") },
-    { label: "Abilities", style: { gridColumn: "span 2" }, onClick: () => onViewChange?.("abilities") },
-  ], [sortKey, onViewChange]);
+  ], [sortKey, onViewChange, cycleSort, sortArrow]);
 
   return (
     <div className="tab-panel active" style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
@@ -147,7 +150,7 @@ export default function Pokedex({ allPokemon, regulation, search, filters, onVie
         headers={headers}
         gridClass="pkmn-grid"
         items={items}
-        rowHeight={ROW_HEIGHT}
+        rowHeight={rowHeight}
         renderItem={renderItem}
         selectedKey={selected?.key}
         getKey={getKey}

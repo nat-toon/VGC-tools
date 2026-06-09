@@ -3,6 +3,7 @@ import TypeIcon from "./TypeIcon.jsx";
 import Icon from "./Icon.jsx";
 import { STAT_CONFIG } from "../lib/constants.js";
 import { bst, displayName } from "../lib/utils.js";
+import NameWithExt from "./NameWithExt.jsx";
 
 function StatCell({ label, value }) {
   return (
@@ -18,8 +19,12 @@ function StatCell({ label, value }) {
 function PokemonRow({ pokemon, selected, onClick }) {
   const p = pokemon;
   const abilities = p.abilities || [];
-  const visibleAbilities = abilities.filter((a) => !a.hidden);
-  const hiddenAbilities = abilities.filter((a) => a.hidden);
+  const visibleAbilities = [];
+  const hiddenAbilities = [];
+  for (const a of abilities) {
+    if (a.hidden) hiddenAbilities.push(a);
+    else visibleAbilities.push(a);
+  }
   const total = bst(p.baseStats);
 
   function handleClick() {
@@ -46,21 +51,12 @@ function PokemonRow({ pokemon, selected, onClick }) {
       <td className="cell-sprite">
         <Icon className="row-icon" icon={p.icon} />
       </td>
-      <td className="cell-name">{p.name}</td>
+      <td className="cell-name"><NameWithExt name={p.name} /></td>
       <td className="cell-type">
         <div className="row-types">
           {(p.types || []).map((t) => (
             <TypeIcon key={t} type={t} size={22} />
           ))}
-        </div>
-      </td>
-      {STAT_CONFIG.map(({ key, label }) => (
-        <StatCell key={key} label={label} value={p.baseStats ? p.baseStats[key] : null} />
-      ))}
-      <td className="cell-bst">
-        <div className="stat-cell-stack">
-          <span className="stat-cell-label">BST</span>
-          <span className="stat-cell-value">{total ?? "?"}</span>
         </div>
       </td>
       <td className="cell-ab">
@@ -71,11 +67,18 @@ function PokemonRow({ pokemon, selected, onClick }) {
             ))}
       </td>
       <td className="cell-hab">
-        {hiddenAbilities.length === 0
-          ? <span className="muted">—</span>
-          : hiddenAbilities.map((a) => (
+        {hiddenAbilities.length > 0 && hiddenAbilities.map((a) => (
               <span key={a.name} className="ab hidden">{displayName(a.name)}</span>
             ))}
+      </td>
+      {STAT_CONFIG.map(({ key, label }) => (
+        <StatCell key={key} label={label} value={p.baseStats ? p.baseStats[key] : null} />
+      ))}
+      <td className="cell-bst">
+        <div className="stat-cell-stack">
+          <span className="stat-cell-label">BST</span>
+          <span className="stat-cell-value">{total ?? "?"}</span>
+        </div>
       </td>
     </tr>
   );

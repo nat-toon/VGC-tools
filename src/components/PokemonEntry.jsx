@@ -12,6 +12,7 @@ import { getMovesWithDetails } from "../lib/learnsets.js";
 import { STAT_CONFIG } from "../lib/constants.js";
 import { statTier, statRangeAtLevel, DEFAULT_LEVEL, MIN_LEVEL, MAX_LEVEL } from "../lib/stats.js";
 import { formatAcc, formatPower, bst } from "../lib/utils.js";
+import NameWithExt from "./NameWithExt.jsx";
 
 export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
   const [level, setLevel] = useState(DEFAULT_LEVEL);
@@ -63,15 +64,27 @@ export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
       <header className="entry-header">
         <div className="entry-sprite-wrap">
           {sprite && !spriteFailed ? (
-            <Sprite sprite={sprite} className="entry-sprite" alt={pokemon.name} loading="eager" onError={handleSpriteError} />
+            <Sprite
+              sprite={sprite}
+              className="entry-sprite"
+              alt={pokemon.name}
+              loading="eager"
+              onError={handleSpriteError}
+            />
           ) : (
-            fallbackIcon && <Icon className="entry-sprite-icon" icon={fallbackIcon} style={{...fallbackIcon.css, width: 96, height: 72}} />
+            fallbackIcon && (
+              <Icon
+                className="entry-sprite-icon"
+                icon={fallbackIcon}
+                style={{ ...fallbackIcon.css, width: 40, height: 30, zoom: 3 }}
+              />
+            )
           )}
         </div>
         <div className="entry-headline">
           <div className="entry-num">#{String(pokemon.num).padStart(4, "0")}</div>
           <h2 className="entry-name" id="entry-name">
-            {pokemon.name}
+            <NameWithExt name={pokemon.name} />
           </h2>
           <div className="entry-types">
             {(pokemon.types || []).map((t) => (
@@ -89,11 +102,10 @@ export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
           <div className="entry-stats">
             <div className="entry-stat entry-stat-header">
               <h3 className="entry-section-title">Base Stats</h3>
-              <span></span>
-              <span className="entry-stat-range-label">min&minus;</span>
-              <span className="entry-stat-range-label">min</span>
-              <span className="entry-stat-range-label">max</span>
-              <span className="entry-stat-range-label">max+</span>
+              <span className="entry-stat-range-label">Min&minus;</span>
+              <span className="entry-stat-range-label">Min</span>
+              <span className="entry-stat-range-label">Max</span>
+              <span className="entry-stat-range-label">Max+</span>
             </div>
             {statRows &&
               statRows.map(({ key, label, value, tier, pct, range }) => (
@@ -145,19 +157,19 @@ export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
           <h3 className="entry-section-title">Abilities</h3>
           {abilities.length === 0 && <div className="entry-muted">No abilities</div>}
           <ul className="entry-abilities">
-          {abilities.map((a) => {
-            const desc = a.details?.shortDesc || a.details?.desc || "No description available.";
-            return (
-              <li
-                key={a.name}
-                className="entry-ability entry-link"
-                onClick={() => setSelectedAbility(a.details ? { ...a.details, _key: a.name } : null)}
-                tabIndex={0}
-                role="button"
-              >
-                <div className="entry-ability-head">
-                  <span className="entry-ability-name">{a.name}</span>
-                  {a.hidden && <span className="entry-ability-tag">Hidden</span>}
+            {abilities.map((a) => {
+              const desc = a.details?.shortDesc || a.details?.desc || "No description available.";
+              return (
+                <li
+                  key={a.name}
+                  className="entry-ability entry-link"
+                  onClick={() => setSelectedAbility(a.details ? { ...a.details, _key: a.name } : null)}
+                  tabIndex={0}
+                  role="button"
+                >
+                  <div className="entry-ability-head">
+                    <span className="entry-ability-name">{a.name}</span>
+                    {a.hidden && <span className="entry-ability-tag">Hidden</span>}
                   </div>
                   <p className="entry-ability-desc">{desc}</p>
                 </li>
@@ -173,63 +185,54 @@ export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
           {moves.length === 0 ? (
             <div className="entry-muted">No moves in this regulation's learnset.</div>
           ) : (
-            <ul className="entry-moves">
+            <div className="entry-moves-wrap">
               {moves.map((m) => (
-                <li
+                <div
                   key={m.id}
-                  className="entry-move entry-link"
+                  className="vt-row moves-grid entry-move-row"
                   onClick={() => setSelectedMove({ ...m, _key: m.id })}
                   tabIndex={0}
                   role="button"
                 >
-                  <div
-                  className="entry-move-stats"
-                  data-no-power={m.category && String(m.category).toLowerCase() === "status" ? true : undefined}
-                >
-                    <span className="entry-move-name" title={m.name}>
-                      {m.name}
-                    </span>
-                    <span className="entry-move-type">{m.type ? <TypeIcon type={m.type} size={18} /> : null}</span>
-                    <span
-                      className="entry-move-cat"
-                      data-category={m.category ? String(m.category).toLowerCase() : undefined}
-                    >
-                      {m.category ? <CategoryIcon category={m.category} width={20} title={m.category} /> : null}
-                    </span>
-                    <span className="entry-move-pwr">
-                      <span className="entry-move-stat-label">Power</span>
-                      <span className="entry-move-stat-value">{formatPower(m.basePower)}</span>
-                    </span>
-                    <span className="entry-move-pp">
-                      <span className="entry-move-stat-label">Accuracy</span>
-                      <span className="entry-move-stat-value">{formatAcc(m.accuracy)}</span>
-                    </span>
-                    <span className="entry-move-acc">
-                      <span className="entry-move-stat-label">PP</span>
-                      <span className="entry-move-stat-value">{m.pp ?? "—"}</span>
-                    </span>
-                    {(() => {
-                      const desc = m.shortDesc || m.desc;
-                      return desc ? <p className="entry-move-desc">{desc}</p> : null;
-                    })()}
+                  <div className="vt-cell vt-spacer"></div>
+                  <div className="vt-cell vt-sprite">{m.type ? <TypeIcon type={m.type} size={28} /> : null}</div>
+                  <div className="vt-cell vt-name move-name">{m.name}</div>
+                  <div className="vt-cell vt-cat">
+                    {m.category ? (
+                      <span className="entry-move-cat" data-category={String(m.category).toLowerCase()}>
+                        <CategoryIcon category={m.category} width={20} />
+                      </span>
+                    ) : null}
                   </div>
-                </li>
+                  <div
+                    className="vt-cell vt-move-stat"
+                    data-no-power={(m.category && String(m.category).toLowerCase() === "status") || undefined}
+                  >
+                    <span className="move-stat-label">BP</span>
+                    <span className="move-stat-value">{formatPower(m.basePower)}</span>
+                  </div>
+                  <div className="vt-cell vt-move-stat">
+                    <span className="move-stat-label">PP</span>
+                    <span className="move-stat-value">{m.pp ?? "\u2014"}</span>
+                  </div>
+                  <div className="vt-cell vt-move-stat">
+                    <span className="move-stat-label">Acc</span>
+                    <span className="move-stat-value">{formatAcc(m.accuracy)}</span>
+                  </div>
+                  <div className="vt-cell vt-desc">{m.shortDesc || m.desc || "\u2014"}</div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </section>
       </div>
 
       <Modal open={!!selectedAbility} onClose={() => setSelectedAbility(null)} labelledBy="ability-name">
-        {selectedAbility && (
-          <AbilityDetail ability={selectedAbility} regulation={regulation} allPokemon={allPokemon} />
-        )}
+        {selectedAbility && <AbilityDetail ability={selectedAbility} regulation={regulation} allPokemon={allPokemon} />}
       </Modal>
 
       <Modal open={!!selectedMove} onClose={() => setSelectedMove(null)} labelledBy="move-name">
-        {selectedMove && (
-          <MoveDetail move={selectedMove} regulation={regulation} allPokemon={allPokemon} />
-        )}
+        {selectedMove && <MoveDetail move={selectedMove} regulation={regulation} allPokemon={allPokemon} />}
       </Modal>
     </div>
   );
