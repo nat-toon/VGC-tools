@@ -54,7 +54,7 @@ const fs = require('fs');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const ts = require('typescript');
-const { REGULATIONS } = require('./regulations-config.cjs');
+const { REGULATIONS, normalizeModDirs } = require('./regulations-config.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 /*
@@ -499,34 +499,66 @@ async function build() {
       continue;
     }
 
-    const modDir = path.join(PS_ROOT, 'data', 'mods', config.modDir);
-    const formatsPath = path.join(modDir, 'formats-data.ts');
-    const learnsetsPath = path.join(modDir, 'learnsets.ts');
-    if (!fs.existsSync(formatsPath)) {
-      console.error('Cannot find', formatsPath);
-      process.exit(1);
-    }
-    if (!fs.existsSync(learnsetsPath)) {
-      console.error('Cannot find', learnsetsPath);
+    const modDirs = normalizeModDirs(config.modDir);
+    if (modDirs.length === 0) {
+      console.error(`Regulation "${config.key}" has no modDir and is not frozen.`);
       process.exit(1);
     }
 
-    const parsed = parseFormatsData(formatsPath, 'FormatsData');
-    if (!parsed) {
-      console.error('Failed to parse', formatsPath);
-      process.exit(1);
+    // Validate all mod directories exist
+    for (const md of modDirs) {
+      const modDirPath = path.join(PS_ROOT, 'data', 'mods', md);
+      const formatsPath = path.join(modDirPath, 'formats-data.ts');
+      const learnsetsPath = path.join(modDirPath, 'learnsets.ts');
+      if (!fs.existsSync(formatsPath)) {
+        console.error('Cannot find', formatsPath);
+        process.exit(1);
+      }
+      if (!fs.existsSync(learnsetsPath)) {
+        console.error('Cannot find', learnsetsPath);
+        process.exit(1);
+      }
     }
+
+    // Merge formats-data from all modDirs (later wins on conflict)
+    let parsed = {};
+    for (const md of modDirs) {
+      const formatsPath = path.join(PS_ROOT, 'data', 'mods', md, 'formats-data.ts');
+      const entries = parseFormatsData(formatsPath, 'FormatsData');
+      if (!entries) {
+        console.error('Failed to parse', formatsPath);
+        process.exit(1);
+      }
+      Object.assign(parsed, entries);
+    }
+
     const excludedSet = new Set(config.excludedRosterNonstandard);
     const ids = deriveRosterIds(parsed, excludedSet);
     const { names, unresolved } = resolveNames(ids, nameMap);
 
-    const modLearnsets = parseLearnsets(learnsetsPath, 'Learnsets') || {};
+    // Merge learnsets from all modDirs (later wins on conflict)
+    let modLearnsets = {};
+    for (const md of modDirs) {
+      const learnsetsPath = path.join(PS_ROOT, 'data', 'mods', md, 'learnsets.ts');
+      const entries = parseLearnsets(learnsetsPath, 'Learnsets') || {};
+      Object.assign(modLearnsets, entries);
+    }
     const { learnsets: regLearnsets, merged, inherited, missing } =
       buildRegulationLearnsets(modLearnsets, formToBase, ids);
     const { slim } = slimLearnsets(regLearnsets);
 
-    const regItemsPatch = loadEntryMap(`mods/${config.modDir}/items.ts`, 'Items');
-    const regAbilitiesPatch = loadEntryMap(`mods/${config.modDir}/abilities.ts`, 'Abilities');
+    // Apply items/abilities patches from all modDirs in order (later wins)
+    let regItemsPatch = {};
+    let regAbilitiesPatch = {};
+    for (const md of modDirs) {
+      const itemsFile = `mods/${md}/items.ts`;
+      const abilitiesFile = `mods/${md}/abilities.ts`;
+      const itemsPatch = loadEntryMap(itemsFile, 'Items');
+      const abilitiesPatch = loadEntryMap(abilitiesFile, 'Abilities');
+      // Later modDirs overwrite earlier ones on the same key
+      Object.assign(regItemsPatch, itemsPatch);
+      Object.assign(regAbilitiesPatch, abilitiesPatch);
+    }
     const { merged: mergedItems, changed: itemsChanged } = mergeEntries(masterItems, regItemsPatch);
     const { merged: mergedAbilities, changed: abilitiesChanged } = mergeEntries(masterAbilities, regAbilitiesPatch);
     const legalItemIds = deriveLegalIds(mergedItems);
@@ -546,7 +578,8 @@ async function build() {
       `${config.key}.js: ${names.length} pokemon, ${legalItemIds.size} items, ${legalAbilityIds.size} abilities, ${config.isNonstandard.length} blocked tags`
     );
     console.log(
-      `    (items: ${itemsChanged} patched by mod; abilities: ${abilitiesChanged} patched by mod)`
+      `    (items: ${itemsChanged} patched by mod; abilities: ${abilitiesChanged} patched by mod)` +
+      (modDirs.length > 1 ? ` [${modDirs.length} modDirs merged: ${modDirs.join(', ')}]` : '')
     );
     console.log(
       `  regulations/${config.key}/learnsets.json: ${Object.keys(slim).length} species (${merged} merged, ${inherited} inherited), ${totalMoves} moves, ${(bytes / 1024).toFixed(1)} KB`

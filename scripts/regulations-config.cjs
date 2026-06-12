@@ -10,8 +10,15 @@
  *   key                          string  regulation id (becomes the bundle
  *                                         filename and the default UI key)
  *   label                        string  UI label
- *   modDir                       string  upstream Showdown mod folder
- *                                         (REQUIRED unless `frozen: true`)
+ *   modDir                       string | string[]
+ *                                         Upstream Showdown mod folder(s).
+ *                                         (REQUIRED unless `frozen: true`).
+ *                                         When an array is given, the build
+ *                                         merges data from each mod directory
+ *                                         in order.  On conflicts (same key
+ *                                         in formats-data, learnsets, items,
+ *                                         or abilities), the LAST directory
+ *                                         wins.
  *   isNonstandard                string[]  isNonstandard tags that are blocked
  *                                         by this regulation (used to check
  *                                         whether a move / item / ability is
@@ -105,4 +112,14 @@ const REGULATIONS = [
   },
 ];
 
-module.exports = { REGULATIONS };
+/**
+ * Normalize a regulation's modDir to an array of strings.
+ * Accepts a single string or an array of strings.
+ * Returns [] for frozen regulations with no modDir.
+ */
+function normalizeModDirs(modDir) {
+  if (!modDir) return [];
+  return Array.isArray(modDir) ? modDir : [modDir];
+}
+
+module.exports = { REGULATIONS, normalizeModDirs };

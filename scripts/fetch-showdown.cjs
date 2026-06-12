@@ -109,11 +109,11 @@ async function fetchTo(out, url) {
 
 function readModDirs() {
   try {
-    const { REGULATIONS } = require('./regulations-config.cjs');
+    const { REGULATIONS, normalizeModDirs } = require('./regulations-config.cjs');
     return [...new Set(
       REGULATIONS
         .filter((r) => !r.frozen && r.modDir)
-        .map((r) => r.modDir)
+        .flatMap((r) => normalizeModDirs(r.modDir))
     )];
   } catch (err) {
     console.warn(`  ! could not read regulations-config.cjs: ${err.message}`);

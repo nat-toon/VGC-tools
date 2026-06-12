@@ -36,7 +36,7 @@
 const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
-const { REGULATIONS } = require('./regulations-config.cjs');
+const { REGULATIONS, normalizeModDirs } = require('./regulations-config.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
 /*
@@ -80,11 +80,13 @@ for (const reg of REGULATIONS) {
    * when a frozen entry omits modDir.
    */
   if (reg.frozen) continue;
-  for (const kind of ['Items', 'Abilities']) {
-    const file = path.join(PS_ROOT, 'data', 'mods', reg.modDir, kind.toLowerCase() + '.ts');
-    if (fs.existsSync(file)) {
-      MOD_FILES[kind] = MOD_FILES[kind] || [];
-      MOD_FILES[kind].push({ key: reg.key, modDir: reg.modDir, file });
+  for (const modDir of normalizeModDirs(reg.modDir)) {
+    for (const kind of ['Items', 'Abilities']) {
+      const file = path.join(PS_ROOT, 'data', 'mods', modDir, kind.toLowerCase() + '.ts');
+      if (fs.existsSync(file)) {
+        MOD_FILES[kind] = MOD_FILES[kind] || [];
+        MOD_FILES[kind].push({ key: reg.key, modDir, file });
+      }
     }
   }
 }
