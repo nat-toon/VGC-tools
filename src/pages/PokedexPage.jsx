@@ -138,7 +138,7 @@ export default function PokedexPage() {
 
       {hasActiveFilters && (
         <div className="filter-bar">
-          {filterOrder.map(({ category, value }) => {
+          {filterEntries.map(({ category, value }) => {
             if (category === "types") {
               return (
                 <span key={`type-${value}`} className="filter-chip filter-chip-type" onClick={() => removeFilter("types", value)} role="button" tabIndex={0}>

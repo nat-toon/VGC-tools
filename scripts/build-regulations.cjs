@@ -322,8 +322,8 @@ function buildRegulationLearnsets(modLearnsets, formToBase, rosterIds) {
    *   aegislashblade  =  aegislash (45 moves)  +  aegislashblade (none)
    *                    =  45 moves
    *
-   *   floettemega  =  floette (none in M-A)  +  floettemega (none)
-   *                 =  missing
+   *   floettemega  =  floetteeternal (inherited)  +  floettemega (none)
+   *                 =  floetteeternal's moves
    */
   const out = {};
   let merged = 0;
@@ -457,6 +457,9 @@ async function build() {
 
   const masterDex = path.join(PS_ROOT, 'data', 'pokedex.ts');
   const formToBase = parseFormToBase(masterDex);
+
+  // Floette-Mega should inherit from Floette-Eternal, not base Floette
+  formToBase['floettemega'] = 'floetteeternal';
 
   const masterItems = loadEntryMap('items.ts', 'Items');
   const masterAbilities = loadEntryMap('abilities.ts', 'Abilities');

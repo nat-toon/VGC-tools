@@ -121,10 +121,8 @@ const AbilityGridRow = memo(function AbilityGridRow({ a }) {
   );
 });
 
-export default function GlobalSearch({ allPokemon, regulation, search, filters, addFilter, removeFilter, setSearch }) {
+export default function GlobalSearch({ allPokemon, regulation, search, filters, addFilter, removeFilter, setSearch, onPokemonSelect }) {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
-  const [selectedMove, setSelectedMove] = useState(null);
-  const [selectedAbility, setSelectedAbility] = useState(null);
   const rowHeight = useRowHeight();
 
   const regPool = useMemo(() => getPool(allPokemon, regulation), [allPokemon, regulation]);
@@ -198,28 +196,32 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
   }, [addFilter, removeFilter, setSearch, filters]);
 
   const handlePokemonClick = useCallback((p) => {
-    setSelectedPokemon((cur) => (cur && cur.key === p.key ? null : p));
-  }, []);
+    if (onPokemonSelect) {
+      onPokemonSelect(p);
+    } else {
+      setSelectedPokemon((cur) => (cur && cur.key === p.key ? null : p));
+    }
+  }, [onPokemonSelect]);
 
   const handleTypeClick = useCallback((t) => {
     toggleFilter("types", t);
   }, [toggleFilter]);
 
-  const handleMoveClick = useCallback((m) => {
-    setSelectedMove((cur) => (cur && cur._key === m._key ? null : m));
-  }, []);
-
   const handleMoveFilter = useCallback((m) => {
     toggleFilter("moves", m._key);
   }, [toggleFilter]);
 
-  const handleAbilityClick = useCallback((a) => {
-    setSelectedAbility((cur) => (cur && cur._key === a._key ? null : a));
-  }, []);
+  const handleMoveClick = useCallback((m) => {
+    handleMoveFilter(m);
+  }, [handleMoveFilter]);
 
   const handleAbilityFilter = useCallback((a) => {
     toggleFilter("abilities", a.name);
   }, [toggleFilter]);
+
+  const handleAbilityClick = useCallback((a) => {
+    handleAbilityFilter(a);
+  }, [handleAbilityFilter]);
 
   const getPokemonKey = useCallback((p) => p.key, []);
   const renderPokemonRow = useCallback((p) => <PokemonGridRow p={p} />, []);
@@ -316,7 +318,7 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
               items={moves}
               rowHeight={rowHeight}
               renderItem={renderMoveRow}
-              selectedKey={selectedMove?._key}
+              selectedKey={null}
               getKey={getMoveKey}
               onSelect={handleMoveClick}
               emptyText=""
@@ -335,7 +337,7 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
               items={abilities}
               rowHeight={rowHeight}
               renderItem={renderAbilityRow}
-              selectedKey={selectedAbility?._key}
+              selectedKey={null}
               getKey={getAbilityKey}
               onSelect={handleAbilityClick}
               emptyText=""
@@ -350,11 +352,13 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
         </div>
       )}
 
-      <Modal open={!!selectedPokemon} onClose={() => setSelectedPokemon(null)} labelledBy="entry-name">
-        {selectedPokemon && (
-          <PokemonEntry pokemon={selectedPokemon} regulation={regulation} allPokemon={allPokemon} />
-        )}
-      </Modal>
+      {!onPokemonSelect && (
+        <Modal open={!!selectedPokemon} onClose={() => setSelectedPokemon(null)} labelledBy="entry-name">
+          {selectedPokemon && (
+            <PokemonEntry pokemon={selectedPokemon} regulation={regulation} allPokemon={allPokemon} />
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

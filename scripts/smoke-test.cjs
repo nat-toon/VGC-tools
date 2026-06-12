@@ -107,7 +107,7 @@ async function main() {
   const maLearnsets = readJson('public/regulations/m-a/learnsets.json');
   const maLearnsetIds = Object.keys(maLearnsets);
 
-  check('m-a learnsets has 275 species (276 - floettemega)', maLearnsetIds.length === 275, `got ${maLearnsetIds.length}`);
+  check('m-a learnsets has 276 species', maLearnsetIds.length === 276, `got ${maLearnsetIds.length}`);
   check('m-a learnsets has venusaur', !!maLearnsets.venusaur);
   check('m-a learnsets has aegislash', !!maLearnsets.aegislash);
   check('m-a learnsets has aegislashblade (form merged)', !!maLearnsets.aegislashblade);
@@ -115,7 +115,9 @@ async function main() {
   check('m-a learnsets has rotom', !!maLearnsets.rotom);
   check('m-a learnsets has rotomheat (form merged with base)', !!maLearnsets.rotomheat);
   check('m-a learnsets has rotomwash (form merged with base)', !!maLearnsets.rotomwash);
-  check('m-a learnsets does NOT have floettemega (no learnset in M-A)', !maLearnsets.floettemega);
+  check('m-a learnsets has floettemega (inherited from floetteeternal)', !!maLearnsets.floettemega);
+  check('floettemega has same moves as floetteeternal (inherited)',
+    JSON.stringify(maLearnsets.floettemega) === JSON.stringify(maLearnsets.floetteeternal));
 
   check('aegislashblade has same moves as aegislash (merge)',
     JSON.stringify(maLearnsets.aegislashblade) === JSON.stringify(maLearnsets.aegislash));

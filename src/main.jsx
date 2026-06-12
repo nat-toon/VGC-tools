@@ -9,8 +9,10 @@ import './styles/categories.css';
 function adjustWidthVar() {
   const root = document.querySelector(':root');
   const tableWrap = document.querySelector('.modal-table-wrap');
-  if (tableWrap) {
-    const width = tableWrap.parentElement.clientWidth;
+  const entryWrap = document.querySelector('.modal-panel .entry');
+  const target = tableWrap || entryWrap;
+  if (target) {
+    const width = target.parentElement.clientWidth;
     root.style.setProperty('--tableWidth', width);
   }
 }

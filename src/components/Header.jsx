@@ -6,7 +6,7 @@ export default function Header() {
 
   return (
     <header>
-      <h1>Pokemon Tools</h1>
+      <h1>VGC tools</h1>
       <nav className="desktop-nav">
         <NavLink to="/pokedex">Pokedex</NavLink>
         <NavLink to="/teambuilder">Team Builder</NavLink>

@@ -27,23 +27,68 @@ export function bstTier(v) {
  * Nature is 0.9 (hinder), 1.0 (neutral) or 1.1 (boost).  HP is
  * unaffected by nature.
  */
-function calcHP(base, level, iv, ev) {
-  return Math.floor((2 * base + iv + Math.floor(ev / 4)) * level / 100) + level + 10;
+export function calcHP(base, level, iv, ev) {
+  return Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level) / 100) + level + 10;
 }
 
-function calcStat(base, level, iv, ev, nature) {
-  return Math.floor((Math.floor((2 * base + iv + Math.floor(ev / 4)) * level / 100) + 5) * nature);
+export function calcStat(base, level, iv, ev, nature) {
+  return Math.floor((Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level) / 100) + 5) * nature);
 }
 
 export const NATURE_HINDER = 0.9;
 export const NATURE_NEUTRAL = 1.0;
 export const NATURE_BOOST = 1.1;
 
-// Worst to best stat range at the given level, using the standard
-// 4-column layout: [min-, min, max, max+].  min- is 0 IV / 0 EV /
-// hindering nature; min is 0/0/neutral; max is 31/252/neutral; max+
-// is 31/252/boosting.  HP ignores nature so the 4 values collapse to
-// the 2 unique endpoints (returned as [min, min, max, max]).
+export const SP_MAX_TOTAL = 66;
+export const SP_MAX_PER_STAT = 32;
+export const FIXED_IV = 31;
+
+/*
+ * Pokémon Champions SP formula.
+ *   HP:   floor((2B + 31) * L / 100) + L + 10 + SP_HP
+ *   Stat: floor((floor((2B + 31) * L / 100) + 5 + SP) * N)
+ * IV is always 31.
+ */
+export function calcHPSpecial(base, level, sp) {
+  return Math.floor(((2 * base + FIXED_IV) * level) / 100) + level + 10 + sp;
+}
+
+export function calcStatSP(base, level, sp, nature) {
+  return Math.floor((Math.floor(((2 * base + FIXED_IV) * level) / 100) + 5 + sp) * nature);
+}
+
+export function calcFinalStatsSP(baseStats, sp, natureObj, level) {
+  if (!baseStats) return null;
+  const L = level ?? DEFAULT_LEVEL;
+  const plus = natureObj?.plus;
+  const minus = natureObj?.minus;
+  const stats = {};
+  stats.hp = calcHPSpecial(baseStats.hp ?? 0, L, sp?.hp ?? 0);
+  for (const key of ["atk", "def", "spa", "spd", "spe"]) {
+    let natureMult = NATURE_NEUTRAL;
+    if (plus === key) natureMult = NATURE_BOOST;
+    else if (minus === key) natureMult = NATURE_HINDER;
+    stats[key] = calcStatSP(baseStats[key] ?? 0, L, sp?.[key] ?? 0, natureMult);
+  }
+  return stats;
+}
+
+/*
+ * Returns [min, max] for stat bar scaling.
+ * HP max is 362, other stats max is 252.
+ */
+export function statRangeSP(isHP) {
+  return [0, isHP ? 362 : 252];
+}
+
+export const DEFAULT_LEVEL = 50;
+export const MIN_LEVEL = 1;
+export const MAX_LEVEL = 100;
+
+/*
+ * Pokedex stat range helpers (used by PokemonEntry.jsx).
+ * Standard formula with variable IV/EV for range display.
+ */
 export function statRangeAtLevel(base, isHP, level) {
   if (base == null) return [null, null, null, null];
   if (isHP) {
@@ -58,7 +103,3 @@ export function statRangeAtLevel(base, isHP, level) {
     calcStat(base, level, 31, 252, NATURE_BOOST),
   ];
 }
-
-export const DEFAULT_LEVEL = 50;
-export const MIN_LEVEL = 1;
-export const MAX_LEVEL = 100;

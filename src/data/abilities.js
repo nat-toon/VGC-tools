@@ -3,7 +3,7 @@
 //
 // Slimmed data extracted from scripts/.cache/upstream/data/{items,abilities}.ts
 // (fetched from https://raw.githubusercontent.com/smogon/pokemon-showdown)
-// with no per-regulation patches merged.
+// with per-regulation patches merged: `champions`.
 // text descriptions sourced from `scripts/.cache/upstream/data/text/abilities.ts`.
 
 export const ENTRIES = Object.freeze({
@@ -61,7 +61,7 @@ export const ENTRIES = Object.freeze({
   "desolateland": {"name":"Desolate Land","num":190,"desc":"On switch-in, the weather becomes Desolate Land, which includes all the effects of Sunny Day and prevents damaging Water-type moves from executing. This weather remains in effect until this Ability is no longer active for any Pokemon, or the weather is changed by the Delta Stream or Primordial Sea Abilities.","shortDesc":"On switch-in, extremely harsh sunlight begins until this Ability is not active in battle."},
   "disguise": {"name":"Disguise","num":209,"desc":"If this Pokemon is a Mimikyu, the first hit it takes in battle deals 0 neutral damage. Its disguise is then broken, it changes to Busted Form, and it loses 1/8 of its max HP. Confusion damage also breaks the disguise.","shortDesc":"(Mimikyu only) The first hit it takes is blocked, and it takes 1/8 HP damage instead."},
   "download": {"name":"Download","num":88,"desc":"On switch-in, this Pokemon's Attack or Special Attack is raised by 1 stage based on the weaker combined defensive stat of all opposing Pokemon. Attack is raised if their Defense is lower, and Special Attack is raised if their Special Defense is the same or lower.","shortDesc":"On switch-in, Attack or Sp. Atk is raised 1 stage based on the foes' weaker Defense."},
-  "dragonize": {"name":"Dragonize","num":312,"isNonstandard":"Future","desc":"This Pokemon's Normal-type moves become Dragon-type moves and have their power multiplied by 1.2. This effect comes after other effects that change a move's type, but before Ion Deluge and Electrify's effects.","shortDesc":"This Pokemon's Normal-type moves become Dragon type and have 1.2x power."},
+  "dragonize": {"name":"Dragonize","num":312,"isNonstandard":null,"desc":"This Pokemon's Normal-type moves become Dragon-type moves and have their power multiplied by 1.2. This effect comes after other effects that change a move's type, but before Ion Deluge and Electrify's effects.","shortDesc":"This Pokemon's Normal-type moves become Dragon type and have 1.2x power."},
   "dragonsmaw": {"name":"Dragon's Maw","num":263,"shortDesc":"This Pokemon's offensive stat is multiplied by 1.5 while using a Dragon-type attack."},
   "drizzle": {"name":"Drizzle","num":2,"shortDesc":"On switch-in, this Pokemon summons Rain Dance."},
   "drought": {"name":"Drought","num":70,"shortDesc":"On switch-in, this Pokemon summons Sunny Day."},
@@ -149,7 +149,7 @@ export const ENTRIES = Object.freeze({
   "magnetpull": {"name":"Magnet Pull","num":42,"desc":"Prevents opposing Steel-type Pokemon from choosing to switch out, unless they are holding a Shed Shell or are a Ghost type.","shortDesc":"Prevents opposing Steel-type Pokemon from choosing to switch out."},
   "marvelscale": {"name":"Marvel Scale","num":63,"shortDesc":"If this Pokemon has a non-volatile status condition, its Defense is multiplied by 1.5."},
   "megalauncher": {"name":"Mega Launcher","num":178,"desc":"This Pokemon's pulse moves have their power multiplied by 1.5. Heal Pulse restores 3/4 of a target's maximum HP, rounded half down.","shortDesc":"This Pokemon's pulse moves have 1.5x power. Heal Pulse heals 3/4 target's max HP."},
-  "megasol": {"name":"Mega Sol","num":315,"isNonstandard":"Future","shortDesc":"This Pokemon's moves are used as if the effects of Sunny Day were active."},
+  "megasol": {"name":"Mega Sol","num":315,"isNonstandard":null,"shortDesc":"This Pokemon's moves are used as if the effects of Sunny Day were active."},
   "merciless": {"name":"Merciless","num":196,"shortDesc":"This Pokemon's attacks are critical hits if the target is poisoned."},
   "mimicry": {"name":"Mimicry","num":250,"desc":"This Pokemon's types change to match the active Terrain when this Pokemon acquires this Ability, or whenever a Terrain begins. Electric type during Electric Terrain, Grass type during Grassy Terrain, Fairy type during Misty Terrain, and Psychic type during Psychic Terrain. If this Ability is acquired without an active Terrain, or a Terrain ends, this Pokemon's types become the original types for its species.","shortDesc":"This Pokemon's types change to match the Terrain. Type reverts when Terrain ends."},
   "mindseye": {"name":"Mind's Eye","num":300,"desc":"This Pokemon can hit Ghost types with Normal- and Fighting-type moves. Prevents other Pokemon from lowering this Pokemon's accuracy stat stage. This Pokemon ignores a target's evasiveness stat stage.","shortDesc":"Fighting, Normal moves hit Ghost. Accuracy can't be lowered, ignores evasiveness."},
@@ -183,7 +183,7 @@ export const ENTRIES = Object.freeze({
   "persistent": {"name":"Persistent","num":-3,"isNonstandard":"CAP","desc":"The duration of Gravity, Heal Block, Magic Room, Safeguard, Tailwind, Trick Room, and Wonder Room is increased by 2 turns if the effect is started by this Pokemon.","shortDesc":"When used, Gravity/Heal Block/Safeguard/Tailwind/Room effects last 2 more turns."},
   "pickpocket": {"name":"Pickpocket","num":124,"desc":"If this Pokemon has no item and is hit by a contact move, it steals the attacker's item. This effect applies after all hits from a multi-hit move. This effect is prevented if the move had a secondary effect removed by the Sheer Force Ability.","shortDesc":"If this Pokemon has no item and is hit by a contact move, it steals the attacker's item."},
   "pickup": {"name":"Pickup","num":53,"desc":"At the end of each turn, if this Pokemon is not holding an item and at least one adjacent Pokemon used an item during this turn, one of those Pokemon is selected at random and this Pokemon obtains that Pokemon's last used item. An item is not considered the last used if it was a popped Air Balloon, if the item was picked up by another Pokemon with this Ability, or if the item was lost to Bug Bite, Corrosive Gas, Covet, Incinerate, Knock Off, Pluck, or Thief. Items thrown with Fling can be picked up.","shortDesc":"If this Pokemon has no item, it finds one used by an adjacent Pokemon this turn."},
-  "piercingdrill": {"name":"Piercing Drill","num":311,"isNonstandard":"Future","shortDesc":"This Pokemon's contact moves ignore a target's protection and deal 1/4 the usual damage."},
+  "piercingdrill": {"name":"Piercing Drill","num":311,"isNonstandard":null,"shortDesc":"This Pokemon's contact moves ignore a target's protection and deal 1/4 the usual damage."},
   "pixilate": {"name":"Pixilate","num":182,"desc":"This Pokemon's Normal-type moves become Fairy-type moves and have their power multiplied by 1.2. This effect comes after other effects that change a move's type, but before Ion Deluge and Electrify's effects.","shortDesc":"This Pokemon's Normal-type moves become Fairy type and have 1.2x power."},
   "plus": {"name":"Plus","num":57,"desc":"If an active ally has this Ability or the Minus Ability, this Pokemon's Special Attack is multiplied by 1.5.","shortDesc":"If an active ally has this Ability or the Minus Ability, this Pokemon's Sp. Atk is 1.5x."},
   "poisonheal": {"name":"Poison Heal","num":90,"desc":"If this Pokemon is poisoned, it restores 1/8 of its maximum HP, rounded down, at the end of each turn instead of losing HP.","shortDesc":"This Pokemon is healed by 1/8 of its max HP each turn when poisoned; no HP loss."},
@@ -253,7 +253,7 @@ export const ENTRIES = Object.freeze({
   "soulheart": {"name":"Soul-Heart","num":220,"shortDesc":"This Pokemon's Special Attack is raised by 1 stage when another Pokemon faints."},
   "soundproof": {"name":"Soundproof","num":43,"shortDesc":"This Pokemon is immune to sound-based moves, unless it used the move."},
   "speedboost": {"name":"Speed Boost","num":3,"desc":"This Pokemon's Speed is raised by 1 stage at the end of each full turn it has been on the field.","shortDesc":"This Pokemon's Speed is raised 1 stage at the end of each full turn on the field."},
-  "spicyspray": {"name":"Spicy Spray","num":318,"isNonstandard":"Future","shortDesc":"If this Pokemon is hit by an attack, the attacker becomes burned."},
+  "spicyspray": {"name":"Spicy Spray","num":318,"isNonstandard":null,"shortDesc":"If this Pokemon is hit by an attack, the attacker becomes burned."},
   "stakeout": {"name":"Stakeout","num":198,"shortDesc":"This Pokemon's offensive stat is doubled against a target that switched in this turn."},
   "stall": {"name":"Stall","num":100,"shortDesc":"This Pokemon moves last among Pokemon using the same or greater priority moves."},
   "stalwart": {"name":"Stalwart","num":242,"shortDesc":"This Pokemon's moves cannot be redirected to a different target by any effect."},

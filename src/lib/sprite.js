@@ -27,7 +27,7 @@
 
 const SPRITE_BASE = "https://play.pokemonshowdown.com/sprites/";
 const POKEMON_ICONS_URL = SPRITE_BASE + "pokemonicons-sheet.png?v22";
-const GEN5_SPRITE_DIR = "gen5";
+const SPRITE_DIRS = ["home-centered", "gen5"];
 const SPRITE_SIZE = 96;
 const ICON_W = 40;
 const ICON_H = 30;
@@ -35,7 +35,9 @@ const ICONS_PER_ROW = 12;
 
 // Showdown's toID: lowercase, strip everything but [a-z0-9].
 function toID(s) {
-  return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 }
 
 // Mirrors the `spriteid` derivation in Showdown's Species constructor
@@ -46,7 +48,7 @@ function toID(s) {
 // historical quirks that we replicate here.
 function computeSpriteid(p) {
   const baseId = toID(p.baseSpecies || p.name);
-  const formeid = (p.key === baseId ? "" : "-" + toID(p.forme || ""));
+  const formeid = p.key === baseId ? "" : "-" + toID(p.forme || "");
   let spriteid = baseId + formeid;
   if (spriteid.endsWith("totem")) spriteid = spriteid.slice(0, -5);
   if (spriteid === "greninja-bond") spriteid = "greninja";
@@ -61,9 +63,7 @@ export function getIcon(p) {
   // (default = dex num, with BattlePokemonIconIndexes overrides
   // applied by slim-showdown.cjs).  Fall back to the dex num if the
   // field is missing (eggs, CAP, or pre-build data).
-  const ii = (typeof p.iconIndex === "number" && p.iconIndex >= 0)
-    ? p.iconIndex
-    : (typeof p.num === "number" ? p.num : 0);
+  const ii = typeof p.iconIndex === "number" && p.iconIndex >= 0 ? p.iconIndex : typeof p.num === "number" ? p.num : 0;
   const top = -Math.floor(ii / ICONS_PER_ROW) * ICON_H;
   const left = -(ii % ICONS_PER_ROW) * ICON_W;
   return {
@@ -75,17 +75,18 @@ export function getIcon(p) {
       width: ICON_W + "px",
       height: ICON_H + "px",
       imageRendering: "pixelated",
-      background:
-        "transparent url(" + POKEMON_ICONS_URL + ") no-repeat scroll " +
-        left + "px " + top + "px",
+      background: "transparent url(" + POKEMON_ICONS_URL + ") no-repeat scroll " + left + "px " + top + "px",
     },
   };
 }
 
 export function getLargeSprite(p) {
   if (!p || !p.key) return null;
+  const spriteid = computeSpriteid(p);
+  const urls = SPRITE_DIRS.map((dir) => SPRITE_BASE + dir + "/" + spriteid + ".png");
   return {
-    url: SPRITE_BASE + GEN5_SPRITE_DIR + "/" + computeSpriteid(p) + ".png",
+    url: urls[0],
+    fallbacks: urls.slice(1),
     w: SPRITE_SIZE,
     h: SPRITE_SIZE,
     pixelated: true,
@@ -122,9 +123,7 @@ export function getItemIcon(spritenum) {
       width: ITEM_ICON_W + "px",
       height: ITEM_ICON_H + "px",
       imageRendering: "pixelated",
-      background:
-        "transparent url(" + ITEM_ICONS_URL + ") no-repeat scroll " +
-        left + "px " + top + "px",
+      background: "transparent url(" + ITEM_ICONS_URL + ") no-repeat scroll " + left + "px " + top + "px",
     },
   };
 }

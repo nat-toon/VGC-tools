@@ -78,7 +78,7 @@ const PokemonGridRow = memo(function PokemonGridRow({ p }) {
   );
 });
 
-export default function Pokedex({ allPokemon, regulation, search, filters, onViewChange }) {
+export default function Pokedex({ allPokemon, regulation, search, filters, onViewChange, onPokemonSelect }) {
   const [sortKey, setSortKey] = useState("");
   const [selected, setSelected] = useState(null);
   const rowHeight = useRowHeight();
@@ -127,8 +127,12 @@ export default function Pokedex({ allPokemon, regulation, search, filters, onVie
   const getKey = useCallback((p) => p.key, []);
 
   const handleSelect = useCallback((p) => {
-    setSelected((cur) => (cur && cur.key === p.key ? null : p));
-  }, []);
+    if (onPokemonSelect) {
+      onPokemonSelect(p);
+    } else {
+      setSelected((cur) => (cur && cur.key === p.key ? null : p));
+    }
+  }, [onPokemonSelect]);
 
   const renderItem = useCallback((p) => <PokemonGridRow p={p} />, []);
 
@@ -157,15 +161,17 @@ export default function Pokedex({ allPokemon, regulation, search, filters, onVie
         onSelect={handleSelect}
         emptyText="No Pokemon match the current filters."
       />
-      <Modal
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        labelledBy="entry-name"
-      >
-        {selected && (
-          <PokemonEntry pokemon={selected} regulation={regulation} allPokemon={allPokemon} />
-        )}
-      </Modal>
+      {!onPokemonSelect && (
+        <Modal
+          open={!!selected}
+          onClose={() => setSelected(null)}
+          labelledBy="entry-name"
+        >
+          {selected && (
+            <PokemonEntry pokemon={selected} regulation={regulation} allPokemon={allPokemon} />
+          )}
+        </Modal>
+      )}
     </div>
   );
 }

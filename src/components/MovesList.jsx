@@ -93,15 +93,18 @@ const MoveGridRow = memo(function MoveGridRow({ m }) {
   );
 });
 
-export default function MovesList({ regulation, search, allPokemon = [], onViewChange, filters, addFilter, removeFilter, setSearch }) {
+export default function MovesList({ regulation, search, allPokemon = [], onViewChange, filters, addFilter, removeFilter, setSearch, onMoveSelect, legalMoves }) {
   const [sortKey, setSortKey] = useState("");
   const [selected, setSelected] = useState(null);
   const rowHeight = useRowHeight();
 
   const items = useMemo(() => {
     const all = getAllMoves();
-    return all.filter((m) => isMoveLegal(m._key, regulation)).map((m) => ({ ...m, _lcName: m.name.toLowerCase() }));
-  }, [regulation]);
+    const legalSet = legalMoves ? new Set(legalMoves) : null;
+    return all
+      .filter((m) => isMoveLegal(m._key, regulation) && (!legalSet || legalSet.has(m._key)))
+      .map((m) => ({ ...m, _lcName: m.name.toLowerCase() }));
+  }, [regulation, legalMoves]);
 
   const isSearching = search.trim().length > 0;
 
@@ -158,8 +161,12 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
   }, [toggleFilter]);
 
   const handleMoveClick = useCallback((m) => {
-    setSelected((cur) => (cur && cur._key === m._key ? null : m));
-  }, []);
+    if (onMoveSelect) {
+      onMoveSelect(m._key);
+    } else {
+      setSelected((cur) => (cur && cur._key === m._key ? null : m));
+    }
+  }, [onMoveSelect]);
 
   const cycleSort = useCallback((field) => {
     setSortKey((cur) => {
@@ -176,8 +183,12 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
   const getKey = useCallback((m) => m._key, []);
 
   const handleTableSelect = useCallback((m) => {
-    setSelected((cur) => (cur && cur._key === m._key ? null : m));
-  }, []);
+    if (onMoveSelect) {
+      onMoveSelect(m._key);
+    } else {
+      setSelected((cur) => (cur && cur._key === m._key ? null : m));
+    }
+  }, [onMoveSelect]);
 
   const renderItem = useCallback((m) => <MoveGridRow m={m} />, []);
 
