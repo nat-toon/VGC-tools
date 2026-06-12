@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import TypeIcon from "./TypeIcon.jsx";
 import CategoryIcon from "./CategoryIcon.jsx";
 import Modal from "./Modal.jsx";
@@ -95,6 +95,7 @@ const MoveGridRow = memo(function MoveGridRow({ m }) {
 
 export default function MovesList({ regulation, search, allPokemon = [], onViewChange, filters, addFilter, removeFilter, setSearch, onMoveSelect, legalMoves }) {
   const [sortKey, setSortKey] = useState("");
+  const sortKeyRef = useRef("");
   const [selected, setSelected] = useState(null);
   const rowHeight = useRowHeight();
 
@@ -170,15 +171,17 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
 
   const cycleSort = useCallback((field) => {
     setSortKey((cur) => {
-      if (!cur || !cur.startsWith(field)) return field + "-asc";
-      return cur.split("-")[1] === "asc" ? field + "-desc" : "";
+      const next = !cur || !cur.startsWith(field) ? field + "-asc" : cur.split("-")[1] === "asc" ? field + "-desc" : "";
+      sortKeyRef.current = next;
+      return next;
     });
   }, []);
 
   const sortArrow = useCallback((field) => {
-    if (!sortKey?.startsWith(field)) return null;
-    return sortKey.split("-")[1] === "asc" ? "\u25B2" : "\u25BC";
-  }, [sortKey]);
+    const sk = sortKeyRef.current;
+    if (!sk?.startsWith(field)) return null;
+    return sk.split("-")[1] === "asc" ? "\u25B2" : "\u25BC";
+  }, []);
 
   const getKey = useCallback((m) => m._key, []);
 

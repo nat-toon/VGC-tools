@@ -80,6 +80,10 @@ export function loadLearnsets(regulation = "all") {
   return promise;
 }
 
+export function areLearnsetsLoaded(regulation = "all") {
+  return dataByRegulation.has(regulation);
+}
+
 export function getLearnset(speciesId, regulation = "all") {
   const data = dataByRegulation.get(regulation);
   if (!data) return null;

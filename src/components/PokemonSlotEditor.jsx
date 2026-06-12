@@ -18,13 +18,13 @@ import { getAbilityByName } from "../lib/abilities.js";
 import { buildAliasSet, matchesAlias } from "../lib/utils.js";
 import { useRowHeight } from "../lib/hooks.js";
 
-function SpriteView({ mon, failed, onFailed }) {
-  const sprite = mon ? getLargeSprite(mon) : null;
-  const icon = mon ? getIcon(mon) : null;
+const SpriteView = memo(function SpriteView({ mon, failed, onFailed }) {
+  const sprite = useMemo(() => (mon ? getLargeSprite(mon) : null), [mon]);
+  const icon = useMemo(() => (mon ? getIcon(mon) : null), [mon]);
   if (!mon) return null;
   if (failed || !sprite) return <span className="pd-pokemon-icon" style={icon?.css} />;
   return <Sprite sprite={sprite} className="pd-pokemon-img" alt={mon.name} loading="lazy" onError={onFailed} />;
-}
+});
 
 function fmtStat(v) {
   if (!Number.isFinite(v)) return "";
@@ -274,9 +274,15 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
     }, 600);
   }, []);
 
-  const isMobile = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 768px)").matches;
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false,
+  );
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 768px)");
+    const handler = (e) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
   }, []);
 
   useEffect(() => {
@@ -336,32 +342,46 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
     [slotIndex, onUpdate],
   );
 
+  const refocusPokemonSearch = useCallback(() => {
+    requestAnimationFrame(() => pokemonSearchRef.current?.focus());
+  }, []);
+
   const addPokemonFilter = useCallback((category, value) => {
     setPokemonFilterEntries((prev) => {
       if (prev.some((e) => e.category === category && e.value === value)) return prev;
       return [...prev, { category, value }];
     });
-  }, []);
+    refocusPokemonSearch();
+  }, [refocusPokemonSearch]);
 
   const removePokemonFilter = useCallback((category, value) => {
     setPokemonFilterEntries((prev) => prev.filter((e) => !(e.category === category && e.value === value)));
-  }, []);
+    refocusPokemonSearch();
+  }, [refocusPokemonSearch]);
 
   const clearPokemonFilters = useCallback(() => {
     setPokemonFilterEntries([]);
+    refocusPokemonSearch();
+  }, [refocusPokemonSearch]);
+
+  const refocusMoveSearch = useCallback(() => {
+    requestAnimationFrame(() => moveSearchRef.current?.focus());
   }, []);
 
   const addMoveFilter = useCallback((category, value) => {
     setMoveFilters((f) => ({ ...f, [category]: [...f[category], value] }));
-  }, []);
+    refocusMoveSearch();
+  }, [refocusMoveSearch]);
 
   const removeMoveFilter = useCallback((category, value) => {
     setMoveFilters((f) => ({ ...f, [category]: f[category].filter((v) => v !== value) }));
-  }, []);
+    refocusMoveSearch();
+  }, [refocusMoveSearch]);
 
   const clearMoveFilters = useCallback(() => {
     setMoveFilters({ categories: [], moveTypes: [] });
-  }, []);
+    refocusMoveSearch();
+  }, [refocusMoveSearch]);
 
   const handleMoveSelect = useCallback(
     (moveKey) => {

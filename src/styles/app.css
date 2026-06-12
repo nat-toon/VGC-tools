@@ -1511,6 +1511,47 @@ main {
     gap: 12px;
     margin-bottom: 12px;
 }
+.team-card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.team-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.team-card-action {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        background 0.1s,
+        color 0.1s,
+        border-color 0.1s;
+}
+.team-card-action:hover:not(:disabled) {
+    background: #222;
+    color: var(--text);
+    border-color: var(--border-strong);
+}
+.team-card-action:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+.team-card-action--delete:hover:not(:disabled) {
+    color: #e63946;
+    border-color: #e63946;
+}
 .team-card-name {
     font-size: 15px;
     font-weight: 700;

@@ -1,11 +1,11 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import VirtualTable from "./VirtualTable.jsx";
 import TypeIcon from "./TypeIcon.jsx";
 import Icon from "./Icon.jsx";
 import Modal from "./Modal.jsx";
 import PokemonEntry from "./PokemonEntry.jsx";
 import { getPool } from "../lib/regulations.js";
-import { getLearnset } from "../lib/learnsets.js";
+import { getLearnset, areLearnsetsLoaded } from "../lib/learnsets.js";
 import { STAT_CONFIG } from "../lib/constants.js";
 import { bst, displayName, applySearchPokemon, cycleSort as utilCycleSort, sortArrow as utilSortArrow } from "../lib/utils.js";
 import NameWithExt from "./NameWithExt.jsx";
@@ -78,8 +78,9 @@ const PokemonGridRow = memo(function PokemonGridRow({ p }) {
   );
 });
 
-export default function Pokedex({ allPokemon, regulation, search, filters, onViewChange, onPokemonSelect }) {
+export default function Pokedex({ allPokemon, regulation, search, filters, onViewChange, onPokemonSelect, learnsetsLoaded = true }) {
   const [sortKey, setSortKey] = useState("");
+  const sortKeyRef = useRef("");
   const [selected, setSelected] = useState(null);
   const rowHeight = useRowHeight();
 
@@ -94,7 +95,7 @@ export default function Pokedex({ allPokemon, regulation, search, filters, onVie
           filters.types.every((t) => (p.types || []).includes(t))
         );
       }
-      if (filters.moves.length > 0) {
+      if (filters.moves.length > 0 && areLearnsetsLoaded(regulation)) {
         pool = pool.filter((p) => {
           const learnset = getLearnset(p.key, regulation);
           return Array.isArray(learnset) && filters.moves.every((m) => learnset.includes(m));
@@ -110,19 +111,21 @@ export default function Pokedex({ allPokemon, regulation, search, filters, onVie
     }
 
     return sortItems(pool, sortKey);
-  }, [regPool, search, sortKey, filters, regulation]);
+  }, [regPool, search, sortKey, filters, regulation, learnsetsLoaded]);
 
   const cycleSort = useCallback((field) => {
     setSortKey((cur) => {
-      if (!cur || !cur.startsWith(field)) return field + "-asc";
-      return cur.split("-")[1] === "asc" ? field + "-desc" : "";
+      const next = !cur || !cur.startsWith(field) ? field + "-asc" : cur.split("-")[1] === "asc" ? field + "-desc" : "";
+      sortKeyRef.current = next;
+      return next;
     });
   }, []);
 
   const sortArrow = useCallback((field) => {
-    if (!sortKey || !sortKey.startsWith(field)) return null;
-    return sortKey.split("-")[1] === "asc" ? "▲" : "▼";
-  }, [sortKey]);
+    const sk = sortKeyRef.current;
+    if (!sk || !sk.startsWith(field)) return null;
+    return sk.split("-")[1] === "asc" ? "▲" : "▼";
+  }, []);
 
   const getKey = useCallback((p) => p.key, []);
 

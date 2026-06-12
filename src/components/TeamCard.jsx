@@ -21,7 +21,7 @@ function TeamCardSprite({ mon }) {
   );
 }
 
-function TeamCard({ team, pokedexMap, itemsMap, regulationLabel, onClick }) {
+function TeamCard({ team, pokedexMap, itemsMap, regulationLabel, onClick, onDelete, onMoveUp, onMoveDown, isFirst, isLast }) {
   function handleKeyDown(e) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -38,8 +38,15 @@ function TeamCard({ team, pokedexMap, itemsMap, regulationLabel, onClick }) {
       role={onClick ? "button" : undefined}
     >
       <div className="team-card-header">
-        <span className="team-card-name">{team.name}</span>
-        <span className="team-card-reg">{regulationLabel || team.regulation}</span>
+        <div className="team-card-header-left">
+          <span className="team-card-name">{team.name}</span>
+          <span className="team-card-reg">{regulationLabel || team.regulation}</span>
+        </div>
+        <div className="team-card-actions" onClick={(e) => e.stopPropagation()}>
+          <button className="team-card-action" onClick={() => onMoveUp?.(team)} disabled={isFirst} title="Move up">▲</button>
+          <button className="team-card-action" onClick={() => onMoveDown?.(team)} disabled={isLast} title="Move down">▼</button>
+          <button className="team-card-action team-card-action--delete" onClick={() => onDelete?.(team)} title="Delete team">×</button>
+        </div>
       </div>
       <div className="team-card-pokemon">
         {team.pokemon.map((slot, i) => {

@@ -57,6 +57,16 @@ export function deleteTeam(id) {
   saveTeams(teams);
 }
 
+export function moveTeam(id, direction) {
+  const teams = loadTeams();
+  const idx = teams.findIndex((t) => t.id === id);
+  if (idx === -1) return;
+  const toIdx = idx + direction;
+  if (toIdx < 0 || toIdx >= teams.length) return;
+  [teams[idx], teams[toIdx]] = [teams[toIdx], teams[idx]];
+  saveTeams(teams);
+}
+
 export function getTeam(id) {
   return loadTeams().find((t) => t.id === id) || null;
 }

@@ -7,7 +7,7 @@ export default function Sprite({ sprite, className, alt, loading = "lazy", onErr
   useEffect(() => {
     setSrc(sprite?.url || "");
     setFallbacks(sprite?.fallbacks || []);
-  }, [sprite]);
+  }, [sprite?.url]);
 
   const handleError = useCallback(() => {
     if (fallbacks.length > 0) {

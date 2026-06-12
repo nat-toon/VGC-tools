@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import Modal from "./Modal.jsx";
 import AbilityDetail from "./AbilityDetail.jsx";
 import VirtualTable from "./VirtualTable.jsx";
@@ -18,6 +18,7 @@ const AbilityGridRow = memo(function AbilityGridRow({ a }) {
 
 export default function AbilitiesList({ regulation, search, allPokemon = [] }) {
   const [sortKey, setSortKey] = useState("");
+  const sortKeyRef = useRef("");
   const [selected, setSelected] = useState(null);
   const rowHeight = useRowHeight();
 
@@ -45,15 +46,17 @@ export default function AbilitiesList({ regulation, search, allPokemon = [] }) {
 
   const cycleSort = useCallback((field) => {
     setSortKey((cur) => {
-      if (!cur || !cur.startsWith(field)) return field + "-asc";
-      return cur.split("-")[1] === "asc" ? field + "-desc" : "";
+      const next = !cur || !cur.startsWith(field) ? field + "-asc" : cur.split("-")[1] === "asc" ? field + "-desc" : "";
+      sortKeyRef.current = next;
+      return next;
     });
   }, []);
 
   const sortArrow = useCallback((field) => {
-    if (!sortKey?.startsWith(field)) return null;
-    return sortKey.split("-")[1] === "asc" ? "▲" : "▼";
-  }, [sortKey]);
+    const sk = sortKeyRef.current;
+    if (!sk?.startsWith(field)) return null;
+    return sk.split("-")[1] === "asc" ? "▲" : "▼";
+  }, []);
 
   const getKey = useCallback((a) => a._key, []);
 

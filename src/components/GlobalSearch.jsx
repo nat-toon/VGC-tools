@@ -9,7 +9,7 @@ import SectionHeader from "./SectionHeader.jsx";
 import { getPool } from "../lib/regulations.js";
 import { getAllMoves, isMoveLegal } from "../lib/moves.js";
 import { getAllAbilities, isAbilityLegal } from "../lib/abilities.js";
-import { getLearnset } from "../lib/learnsets.js";
+import { getLearnset, areLearnsetsLoaded } from "../lib/learnsets.js";
 import { displayName, formatPower, formatAcc, buildAliasSet, matchesAlias } from "../lib/utils.js";
 import NameWithExt from "./NameWithExt.jsx";
 import { STAT_CONFIG, TYPES } from "../lib/constants.js";
@@ -121,7 +121,7 @@ const AbilityGridRow = memo(function AbilityGridRow({ a }) {
   );
 });
 
-export default function GlobalSearch({ allPokemon, regulation, search, filters, addFilter, removeFilter, setSearch, onPokemonSelect }) {
+export default function GlobalSearch({ allPokemon, regulation, search, filters, addFilter, removeFilter, setSearch, onPokemonSelect, learnsetsLoaded = true }) {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
   const rowHeight = useRowHeight();
 
@@ -143,7 +143,7 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
       );
     }
 
-    if (filters.moves.length > 0) {
+    if (filters.moves.length > 0 && areLearnsetsLoaded(regulation)) {
       filtered = filtered.filter((p) => {
         const learnset = getLearnset(p.key, regulation);
         return Array.isArray(learnset) && filters.moves.every((m) => learnset.includes(m));
@@ -159,7 +159,7 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
     }
 
     return filtered.sort((a, b) => a.num - b.num || a.name.localeCompare(b.name));
-  }, [regPool, searchQ, searchAliasSet, filters, regulation]);
+  }, [regPool, searchQ, searchAliasSet, filters, regulation, learnsetsLoaded]);
 
   const types = useMemo(
     () => TYPES

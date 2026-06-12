@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TeamCard from "../components/TeamCard.jsx";
-import { loadTeams, createTeam } from "../lib/teams.js";
+import { loadTeams, createTeam, deleteTeam, moveTeam } from "../lib/teams.js";
 import { loadPokedex } from "../lib/pokedex.js";
 import { getAllItems } from "../lib/items.js";
 import { REGULATIONS, DEFAULT_REG } from "../lib/regulations.js";
@@ -45,6 +45,17 @@ export default function TeamListPage() {
     navigate(`/teambuilder/${team.id}`);
   }, [navigate]);
 
+  const handleDeleteTeam = useCallback((team) => {
+    if (!window.confirm(`Delete "${team.name}"?`)) return;
+    deleteTeam(team.id);
+    setTeams(loadTeams());
+  }, []);
+
+  const handleMoveTeam = useCallback((team, direction) => {
+    moveTeam(team.id, direction);
+    setTeams(loadTeams());
+  }, []);
+
   if (!loaded) {
     return <div className="loading-text">Loading…</div>;
   }
@@ -55,7 +66,7 @@ export default function TeamListPage() {
         <h2 className="team-list-title">My Teams</h2>
       </div>
       <div className="team-list">
-        {teams.map((team) => (
+        {teams.map((team, i) => (
           <TeamCard
             key={team.id}
             team={team}
@@ -63,6 +74,11 @@ export default function TeamListPage() {
             itemsMap={itemsMap}
             regulationLabel={REGULATIONS[team.regulation]?.label}
             onClick={handleOpenTeam}
+            onDelete={handleDeleteTeam}
+            onMoveUp={(t) => handleMoveTeam(t, -1)}
+            onMoveDown={(t) => handleMoveTeam(t, 1)}
+            isFirst={i === 0}
+            isLast={i === teams.length - 1}
           />
         ))}
         <button className="team-card team-card-new" onClick={handleNewTeam}>

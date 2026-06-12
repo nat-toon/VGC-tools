@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import Icon from "./Icon.jsx";
 import Modal from "./Modal.jsx";
 import PokedexTable from "./PokedexTable.jsx";
@@ -78,6 +78,7 @@ const ItemGridRow = memo(function ItemGridRow({ i }) {
 
 export default function ItemsList({ regulation, search, allPokemon = [] }) {
   const [sortKey, setSortKey] = useState("");
+  const sortKeyRef = useRef("");
   const [selected, setSelected] = useState(null);
   const rowHeight = useRowHeight();
 
@@ -105,15 +106,17 @@ export default function ItemsList({ regulation, search, allPokemon = [] }) {
 
   const cycleSort = useCallback((field) => {
     setSortKey((cur) => {
-      if (!cur || !cur.startsWith(field)) return field + "-asc";
-      return cur.split("-")[1] === "asc" ? field + "-desc" : "";
+      const next = !cur || !cur.startsWith(field) ? field + "-asc" : cur.split("-")[1] === "asc" ? field + "-desc" : "";
+      sortKeyRef.current = next;
+      return next;
     });
   }, []);
 
   const sortArrow = useCallback((field) => {
-    if (!sortKey?.startsWith(field)) return null;
-    return sortKey.split("-")[1] === "asc" ? "▲" : "▼";
-  }, [sortKey]);
+    const sk = sortKeyRef.current;
+    if (!sk?.startsWith(field)) return null;
+    return sk.split("-")[1] === "asc" ? "▲" : "▼";
+  }, []);
 
   const getKey = useCallback((i) => i._key, []);
 

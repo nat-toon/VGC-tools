@@ -6,20 +6,25 @@ import './styles/app.css';
 import './styles/types.css';
 import './styles/categories.css';
 
-function adjustWidthVar() {
-  const root = document.querySelector(':root');
-  const tableWrap = document.querySelector('.modal-table-wrap');
-  const entryWrap = document.querySelector('.modal-panel .entry');
-  const target = tableWrap || entryWrap;
-  if (target) {
-    const width = target.parentElement.clientWidth;
-    root.style.setProperty('--tableWidth', width);
-  }
+let rafId = 0;
+function scheduleAdjust() {
+  if (rafId) return;
+  rafId = requestAnimationFrame(() => {
+    rafId = 0;
+    const root = document.querySelector(':root');
+    const tableWrap = document.querySelector('.modal-table-wrap');
+    const entryWrap = document.querySelector('.modal-panel .entry');
+    const target = tableWrap || entryWrap;
+    if (target) {
+      const width = target.parentElement.clientWidth;
+      root.style.setProperty('--tableWidth', width);
+    }
+  });
 }
 
-const observer = new MutationObserver(() => adjustWidthVar());
-observer.observe(document.body, { childList: true, subtree: true, attributeFilter: ['class'] });
-window.addEventListener('resize', adjustWidthVar);
+const observer = new MutationObserver(scheduleAdjust);
+observer.observe(document.body, { childList: true, subtree: true });
+window.addEventListener('resize', scheduleAdjust);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

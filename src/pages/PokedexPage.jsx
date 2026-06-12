@@ -13,7 +13,7 @@ const AbilitiesList = lazy(() => import("../components/AbilitiesList.jsx"));
 const GlobalSearch = lazy(() => import("../components/GlobalSearch.jsx"));
 import { loadPokedex } from "../lib/pokedex.js";
 import { loadMoves } from "../lib/moves.js";
-import { loadLearnsets } from "../lib/learnsets.js";
+import { loadLearnsets, areLearnsetsLoaded } from "../lib/learnsets.js";
 import { REGULATIONS, DEFAULT_REG } from "../lib/regulations.js";
 import { REG_KEY, CATEGORY_COLORS } from "../lib/constants.js";
 
@@ -30,6 +30,7 @@ export default function PokedexPage() {
   const [view, setView] = useState("pokemon");
   const [search, setSearch] = useState("");
   const [filterEntries, setFilterEntries] = useState([]);
+  const [learnsetsLoaded, setLearnsetsLoaded] = useState(() => areLearnsetsLoaded(regulation));
 
   const filters = {
     types: filterEntries.filter((e) => e.category === "types").map((e) => e.value),
@@ -74,7 +75,12 @@ export default function PokedexPage() {
 
   useEffect(() => {
     loadMoves().catch((err) => console.warn("moves:", err));
-    loadLearnsets(regulation).catch((err) => console.warn("learnsets:", err));
+  }, []);
+
+  useEffect(() => {
+    loadLearnsets(regulation)
+      .then(() => setLearnsetsLoaded(true))
+      .catch((err) => console.warn("learnsets:", err));
   }, [regulation]);
 
   useEffect(() => {
@@ -198,6 +204,7 @@ export default function PokedexPage() {
             addFilter={addFilter}
             removeFilter={removeFilter}
             setSearch={setSearch}
+            learnsetsLoaded={learnsetsLoaded}
           />
         ) : hasActiveFilters && view === "pokemon" ? (
           <Pokedex
@@ -206,6 +213,7 @@ export default function PokedexPage() {
             search=""
             filters={filters}
             onViewChange={setView}
+            learnsetsLoaded={learnsetsLoaded}
           />
         ) : (
           <>
@@ -215,6 +223,7 @@ export default function PokedexPage() {
                 regulation={regulation}
                 search={search}
                 onViewChange={setView}
+                learnsetsLoaded={learnsetsLoaded}
               />
             )}
             {view === "types" && (

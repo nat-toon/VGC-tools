@@ -51,18 +51,11 @@ export function displayName(name) {
 }
 
 export function applySearchPokemon(pool, search) {
-  const q = search.trim().toLowerCase();
+  const { q, aliasSet } = buildAliasSet(search);
   if (!q) return pool;
 
-  const exactAlias = resolveAlias(q);
-  const exactAliasLower = exactAlias ? exactAlias.toLowerCase() : null;
-  const aliasTargets = getAliasesMatching(q);
-  const aliasSet = new Set(aliasTargets.map((t) => t.toLowerCase()));
-  if (exactAliasLower) aliasSet.add(exactAliasLower);
-
   return pool.filter((p) => {
-    if (p._lcName.includes(q)) return true;
-    if (aliasSet.has(p._lcName)) return true;
+    if (matchesAlias(p, q, aliasSet)) return true;
     if (String(p.num).includes(q)) return true;
     return p._lcAbil.some((a) => a.includes(q));
   });
