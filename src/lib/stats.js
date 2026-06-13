@@ -97,9 +97,9 @@ export function statRangeAtLevel(base, isHP, level) {
     return [min, min, max, max];
   }
   return [
-    calcStat(base, level, 0, 0, NATURE_HINDER),
-    calcStat(base, level, 0, 0, NATURE_NEUTRAL),
-    calcStat(base, level, 31, 252, NATURE_NEUTRAL),
-    calcStat(base, level, 31, 252, NATURE_BOOST),
+    calcStatSP(base, level, 0, NATURE_HINDER),
+    calcStatSP(base, level, 0, NATURE_NEUTRAL),
+    calcStatSP(base, level, 32, NATURE_NEUTRAL),
+    calcStatSP(base, level, 32, NATURE_BOOST),
   ];
 }
