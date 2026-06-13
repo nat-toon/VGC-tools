@@ -10,6 +10,7 @@ export default function Header() {
       <nav className="desktop-nav">
         <NavLink to="/pokedex">Pokedex</NavLink>
         <NavLink to="/teambuilder">Team Builder</NavLink>
+        <NavLink to="/calculator">Calculator</NavLink>
       </nav>
       <button
         className="hamburger"
@@ -33,6 +34,9 @@ export default function Header() {
           </NavLink>
           <NavLink to="/teambuilder" onClick={() => setMenuOpen(false)}>
             Team Builder
+          </NavLink>
+          <NavLink to="/calculator" onClick={() => setMenuOpen(false)}>
+            Calculator
           </NavLink>
         </nav>
       )}
