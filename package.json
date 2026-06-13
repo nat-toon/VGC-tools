@@ -9,7 +9,8 @@
     "build:data": "node scripts/build-data.cjs",
     "build": "node scripts/build-data.cjs && vite build",
     "smoke": "node scripts/smoke-test.cjs",
-    "preview": "vite preview"
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -18,9 +19,10 @@
     "react-window": "^2.2.7"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.40.2",
     "@vitejs/plugin-react": "^4.5.0",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
-    "wrangler": "^4.98.0"
+    "wrangler": "^4.100.0"
   }
 }
