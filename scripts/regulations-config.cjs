@@ -18,7 +18,11 @@
  *                                         in order.  On conflicts (same key
  *                                         in formats-data, learnsets, items,
  *                                         or abilities), the LAST directory
- *                                         wins.
+ *                                         wins.  Missing formats-data.ts /
+ *                                         learnsets.ts files are tolerated:
+ *                                         the builder keeps the latest
+ *                                         available source and falls back to
+ *                                         master data/* as a final default.
  *   isNonstandard                string[]  isNonstandard tags that are blocked
  *                                         by this regulation (used to check
  *                                         whether a move / item / ability is

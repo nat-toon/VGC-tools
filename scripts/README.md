@@ -34,6 +34,10 @@ Two sources feed the data:
      - `mods/{modDir}/moves.ts`        - per-regulation move patches
 
      `{modDir}` is taken from each entry in `regulations-config.cjs`.
+     If a mod directory is missing `formats-data.ts` or `learnsets.ts`,
+     the builder keeps the latest available file from earlier modDirs;
+     if no mod file exists at all, it falls back to master
+     `data/formats-data.ts` / `data/learnsets.ts`.
 
      To work offline against a local checkout, set `POKEMON_SHOWDOWN_LOCAL`
      to the repo path.  The build scripts will read from there instead

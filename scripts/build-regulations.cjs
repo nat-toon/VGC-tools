@@ -26,6 +26,11 @@
  *   - mods/{modDir}/items.ts         per-regulation item patches
  *   - mods/{modDir}/abilities.ts     per-regulation ability patches
  *
+ * A regulation can point to multiple mod directories. If a given modDir
+ * is missing `formats-data.ts` or `learnsets.ts`, build-regulations will
+ * keep the latest available file from earlier modDirs; if none exists at
+ * all, it falls back to the master `data/{formats-data,learnsets}.ts`.
+ *
  * The master pokedex is used to resolve form -> base species, so that
  * forms like Aegislash-Blade fall back to Aegislash's learnset.
  *
@@ -442,6 +447,20 @@ function emitLearnsetsJson(filePath, slim) {
   return json.length;
 }
 
+function collectExistingModFiles(modDirs, fileName) {
+  const out = [];
+  const missing = [];
+  for (const md of modDirs) {
+    const abs = path.join(PS_ROOT, 'data', 'mods', md, fileName);
+    if (fs.existsSync(abs)) {
+      out.push({ modDir: md, abs });
+    } else {
+      missing.push({ modDir: md, abs });
+    }
+  }
+  return { found: out, missing };
+}
+
 async function build() {
   if (!fs.existsSync(PS_ROOT)) {
     console.error(
@@ -505,28 +524,51 @@ async function build() {
       process.exit(1);
     }
 
-    // Validate all mod directories exist
-    for (const md of modDirs) {
-      const modDirPath = path.join(PS_ROOT, 'data', 'mods', md);
-      const formatsPath = path.join(modDirPath, 'formats-data.ts');
-      const learnsetsPath = path.join(modDirPath, 'learnsets.ts');
-      if (!fs.existsSync(formatsPath)) {
-        console.error('Cannot find', formatsPath);
-        process.exit(1);
-      }
-      if (!fs.existsSync(learnsetsPath)) {
-        console.error('Cannot find', learnsetsPath);
-        process.exit(1);
-      }
+    const { found: formatsSources, missing: missingFormats } =
+      collectExistingModFiles(modDirs, 'formats-data.ts');
+    const { found: learnsetSources, missing: missingLearnsets } =
+      collectExistingModFiles(modDirs, 'learnsets.ts');
+
+    for (const miss of missingFormats) {
+      console.warn(
+        `  Note: ${config.key} missing mods/${miss.modDir}/formats-data.ts; using latest available source.`
+      );
+    }
+    for (const miss of missingLearnsets) {
+      console.warn(
+        `  Note: ${config.key} missing mods/${miss.modDir}/learnsets.ts; using latest available source.`
+      );
     }
 
-    // Merge formats-data from all modDirs (later wins on conflict)
+    if (formatsSources.length === 0) {
+      const masterFormatsPath = path.join(PS_ROOT, 'data', 'formats-data.ts');
+      if (!fs.existsSync(masterFormatsPath)) {
+        console.error('Cannot find any formats-data.ts source for', config.key);
+        process.exit(1);
+      }
+      formatsSources.push({ modDir: '(master)', abs: masterFormatsPath });
+      console.warn(
+        `  Note: ${config.key} has no mod formats-data.ts; falling back to data/formats-data.ts.`
+      );
+    }
+    if (learnsetSources.length === 0) {
+      const masterLearnsetsPath = path.join(PS_ROOT, 'data', 'learnsets.ts');
+      if (!fs.existsSync(masterLearnsetsPath)) {
+        console.error('Cannot find any learnsets.ts source for', config.key);
+        process.exit(1);
+      }
+      learnsetSources.push({ modDir: '(master)', abs: masterLearnsetsPath });
+      console.warn(
+        `  Note: ${config.key} has no mod learnsets.ts; falling back to data/learnsets.ts.`
+      );
+    }
+
+    // Merge formats-data from available sources (later wins on conflict)
     let parsed = {};
-    for (const md of modDirs) {
-      const formatsPath = path.join(PS_ROOT, 'data', 'mods', md, 'formats-data.ts');
-      const entries = parseFormatsData(formatsPath, 'FormatsData');
+    for (const source of formatsSources) {
+      const entries = parseFormatsData(source.abs, 'FormatsData');
       if (!entries) {
-        console.error('Failed to parse', formatsPath);
+        console.error('Failed to parse', source.abs);
         process.exit(1);
       }
       Object.assign(parsed, entries);
@@ -536,11 +578,10 @@ async function build() {
     const ids = deriveRosterIds(parsed, excludedSet);
     const { names, unresolved } = resolveNames(ids, nameMap);
 
-    // Merge learnsets from all modDirs (later wins on conflict)
+    // Merge learnsets from available sources (later wins on conflict)
     let modLearnsets = {};
-    for (const md of modDirs) {
-      const learnsetsPath = path.join(PS_ROOT, 'data', 'mods', md, 'learnsets.ts');
-      const entries = parseLearnsets(learnsetsPath, 'Learnsets') || {};
+    for (const source of learnsetSources) {
+      const entries = parseLearnsets(source.abs, 'Learnsets') || {};
       Object.assign(modLearnsets, entries);
     }
     const { learnsets: regLearnsets, merged, inherited, missing } =
