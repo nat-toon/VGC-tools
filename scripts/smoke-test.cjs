@@ -285,7 +285,9 @@ async function runFrozenRegulationTest() {
     // Use that boundary to inject a temporary frozen entry without parsing JS.
     const marker = '\n];\n\n';
     const markerIndex = originalConfig.indexOf(marker);
-    if (markerIndex === -1) throw new Error('Could not find REGULATIONS array terminator');
+    if (markerIndex === -1) {
+      throw new Error('Could not find the REGULATIONS array terminator in scripts/regulations-config.cjs');
+    }
     const prefix = originalConfig.slice(0, markerIndex);
     const suffix = originalConfig.slice(markerIndex + marker.length);
     const modifiedConfig = prefix + '\n' + frozenEntry + '];\n\n' + suffix;
