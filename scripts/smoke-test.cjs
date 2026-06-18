@@ -185,7 +185,7 @@ async function main() {
   check('isItemLegal("leftovers", "m-a") === true', isItemLegal('leftovers', 'm-a'));
   check('isItemLegal("venusaurite", "m-a") === true (un-banned by mod)', isItemLegal('venusaurite', 'm-a'));
   check('isItemLegal("absorbbulb", "m-a") === false (Past)', !isItemLegal('absorbbulb', 'm-a'));
-  check('isItemLegal("absorbbulb", "all") === true (standard in master, not Past)', isItemLegal('absorbbulb', 'all'));
+  check('isItemLegal("blackbelt", "all") === true (standard item stays legal in "all")', isItemLegal('blackbelt', 'all'));
   check('isItemLegal("spelltag", "m-a") === true (mod un-banned)', isItemLegal('spelltag', 'm-a'));
 
   check('isAbilityLegal("overgrow", "m-a") === true', isAbilityLegal('overgrow', 'm-a'));

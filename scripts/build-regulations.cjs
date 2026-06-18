@@ -462,36 +462,45 @@ function collectExistingModFiles(modDirs, fileName) {
 }
 
 async function build() {
-  if (!fs.existsSync(PS_ROOT)) {
-    console.error(
-      'upstream source not found at', PS_ROOT, '\n' +
-      '  run `npm run fetch` to populate scripts/.cache/upstream, or\n' +
-      '  set POKEMON_SHOWDOWN_LOCAL to a local checkout of pokemon-showdown.'
-    );
-    process.exit(1);
-  }
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
-  const nameMap = loadNameMap();
-
-  const masterDex = path.join(PS_ROOT, 'data', 'pokedex.ts');
-  const formToBase = parseFormToBase(masterDex);
-
-  // Floette-Mega should inherit from Floette-Eternal, not base Floette
-  formToBase['floettemega'] = 'floetteeternal';
-
-  const masterItems = loadEntryMap('items.ts', 'Items');
-  const masterAbilities = loadEntryMap('abilities.ts', 'Abilities');
-  if (!Object.keys(masterItems).length) {
-    console.error('Failed to parse master items.ts');
-    process.exit(1);
-  }
-  if (!Object.keys(masterAbilities).length) {
-    console.error('Failed to parse master abilities.ts');
-    process.exit(1);
-  }
-
   const builtKeys = [];
+  let upstreamLoaded = false;
+  let nameMap;
+  let formToBase;
+  let masterItems;
+  let masterAbilities;
+
+  function ensureUpstreamLoaded() {
+    if (upstreamLoaded) return;
+    if (!fs.existsSync(PS_ROOT)) {
+      console.error(
+        'upstream source not found at', PS_ROOT, '\n' +
+        '  run `npm run fetch` to populate scripts/.cache/upstream, or\n' +
+        '  set POKEMON_SHOWDOWN_LOCAL to a local checkout of pokemon-showdown.'
+      );
+      process.exit(1);
+    }
+
+    nameMap = loadNameMap();
+
+    const masterDex = path.join(PS_ROOT, 'data', 'pokedex.ts');
+    formToBase = parseFormToBase(masterDex);
+    // Floette-Mega should inherit from Floette-Eternal, not base Floette
+    formToBase['floettemega'] = 'floetteeternal';
+
+    masterItems = loadEntryMap('items.ts', 'Items');
+    masterAbilities = loadEntryMap('abilities.ts', 'Abilities');
+    if (!Object.keys(masterItems).length) {
+      console.error('Failed to parse master items.ts');
+      process.exit(1);
+    }
+    if (!Object.keys(masterAbilities).length) {
+      console.error('Failed to parse master abilities.ts');
+      process.exit(1);
+    }
+    upstreamLoaded = true;
+  }
 
   for (const config of REGULATIONS) {
     if (config.frozen) {
@@ -517,6 +526,8 @@ async function build() {
       builtKeys.push(config.key);
       continue;
     }
+
+    ensureUpstreamLoaded();
 
     const modDirs = normalizeModDirs(config.modDir);
     if (modDirs.length === 0) {
