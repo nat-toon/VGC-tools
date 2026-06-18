@@ -31,6 +31,13 @@
  * last patch applied in config order.  Do not use it for legality
  * checks — use the per-regulation allowlist from the regulation
  * bundle instead.
+ *
+ * Per-mod files (mods/{modDir}/{items,abilities}.ts) are OPTIONAL.
+ * A mod that doesn't ship a particular file just contributes no
+ * patches for that kind and the master config remains the default.
+ * The "404 / file not found" case is treated as "mod does not
+ * define this file" - graceful, with a warning so partial mods
+ * are visible in the build log.
  */
 
 const fs = require('fs');
@@ -78,14 +85,34 @@ for (const reg of REGULATIONS) {
    * upstream patches must NOT be merged into the global lookup tables.
    * Skipping them here also avoids a path.join(..., undefined, ...) crash
    * when a frozen entry omits modDir.
+   *
+   * Per-mod files (items.ts / abilities.ts) are also optional on a
+   * per-mod basis.  A missing modDir or a mod that doesn't ship a
+   * given file is logged as a warning and contributes no patches -
+   * the master config remains the default.  This matches the
+   * "404 -> mod does not define this file" semantics used in
+   * build-regulations.cjs.
    */
   if (reg.frozen) continue;
   for (const modDir of normalizeModDirs(reg.modDir)) {
+    const modDirPath = path.join(PS_ROOT, 'data', 'mods', modDir);
+    if (!fs.existsSync(modDirPath)) {
+      console.warn(
+        `  mod directory mods/${modDir} not found - this modDir will ` +
+        `contribute no patches to "${reg.key}"`
+      );
+      continue;
+    }
     for (const kind of ['Items', 'Abilities']) {
-      const file = path.join(PS_ROOT, 'data', 'mods', modDir, kind.toLowerCase() + '.ts');
+      const file = path.join(modDirPath, kind.toLowerCase() + '.ts');
       if (fs.existsSync(file)) {
         MOD_FILES[kind] = MOD_FILES[kind] || [];
         MOD_FILES[kind].push({ key: reg.key, modDir, file });
+      } else {
+        console.warn(
+          `  mods/${modDir}/${kind.toLowerCase()}.ts not found - ` +
+          `mod does not define this file, "${reg.key}" will use master config`
+        );
       }
     }
   }
@@ -249,6 +276,8 @@ function parseAliasesExport(filePath) {
       return node.text;
     }
     if (node.kind === ts.SyntaxKind.NullKeyword) return null;
+    if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
+    if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
     if (ts.isNumericLiteral(node)) return Number(node.text);
     return undefined;
   }

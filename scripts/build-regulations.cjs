@@ -26,6 +26,33 @@
  *   - mods/{modDir}/items.ts         per-regulation item patches
  *   - mods/{modDir}/abilities.ts     per-regulation ability patches
  *
+ * Each of those four files is OPTIONAL on a per-mod basis.  A mod may
+ * ship only some of them (e.g. a mod that patches items/abilities
+ * without touching the roster or learnsets).  When a mod is missing a
+ * given file we treat that as "mod does not define this file" and
+ * gracefully fall back:
+ *
+ *   formats-data.ts   per-mod only; if NO mod in modDirs defines it,
+ *                     the regulation has no roster and the build fails.
+ *                     Otherwise the first (latest, in array order) mod
+ *                     that defines it provides the data, with later
+ *                     modDirs overlaying entries on conflict.
+ *
+ *   learnsets.ts      per-mod only; same as formats-data but missing
+ *                     everywhere is NOT fatal - we just emit an empty
+ *                     learnsets.json so the regulation still loads with
+ *                     no learnset data attached to its roster.
+ *
+ *   items.ts          master data/items.ts is the default; missing mod
+ *                     files contribute no patches and the master
+ *                     allowlist is used verbatim.
+ *
+ *   abilities.ts      master data/abilities.ts is the default; same
+ *                     behaviour as items.ts.
+ *
+ * The 404 / file-not-found case is therefore never fatal per mod -
+ * it's only fatal across all modDirs for formats-data (the roster).
+ *
  * The master pokedex is used to resolve form -> base species, so that
  * forms like Aegislash-Blade fall back to Aegislash's learnset.
  *
@@ -298,15 +325,52 @@ function mergeEntries(base, patch) {
   return { merged, changed };
 }
 
-function loadEntryMap(modRelPath, exportName) {
+function loadEntryMap(modRelPath, exportName, opts = {}) {
   /*
    * Load an entries map from the master data or a per-regulation mod
    * folder.  Returns an empty object if the file doesn't exist (e.g.
    * a mod has no `items.ts`).
+   *
+   *   opts.silent   true to suppress the "mod does not define this
+   *                 file" warning.  Use for the master files, where
+   *                 a missing file is already a fatal error handled
+   *                 by the caller - emitting a warning first would
+   *                 be noise.
    */
   const abs = path.join(PS_ROOT, 'data', modRelPath);
-  if (!fs.existsSync(abs)) return {};
+  if (!fs.existsSync(abs)) {
+    if (!opts.silent) {
+      console.warn(
+        `  ${modRelPath} not found - mod does not define this file, ` +
+        `falling back to default config`
+      );
+    }
+    return {};
+  }
   return parseExportedMap(abs, exportName) || {};
+}
+
+function readModFileIfExists(modDir, fileName, label) {
+  /*
+   * Resolve a per-mod file path, returning null (with a warning) if
+   * the file is missing.  This is the per-mod equivalent of the
+   * "404 -> mod does not define this file" fallback used for items /
+   * abilities via loadEntryMap, applied to formats-data.ts and
+   * learnsets.ts which are read with file-type-specific parsers.
+   *
+   *   modDir    e.g. "champions" or "championsregma"
+   *   fileName  e.g. "formats-data.ts"
+   *   label     human-readable role of the file (for the warning)
+   */
+  const abs = path.join(PS_ROOT, 'data', 'mods', modDir, fileName);
+  if (!fs.existsSync(abs)) {
+    console.warn(
+      `  mods/${modDir}/${fileName} not found - ${label} not defined ` +
+      `by this mod, falling back to latest available modDir or default config`
+    );
+    return null;
+  }
+  return abs;
 }
 
 function buildRegulationLearnsets(modLearnsets, formToBase, rosterIds) {
@@ -461,8 +525,11 @@ async function build() {
   // Floette-Mega should inherit from Floette-Eternal, not base Floette
   formToBase['floettemega'] = 'floetteeternal';
 
-  const masterItems = loadEntryMap('items.ts', 'Items');
-  const masterAbilities = loadEntryMap('abilities.ts', 'Abilities');
+  // Master items.ts / abilities.ts are the "default config" fallback
+  // for per-regulation patches.  Missing master files are fatal - the
+  // master is the foundation everything else builds on top of.
+  const masterItems = loadEntryMap('items.ts', 'Items', { silent: true });
+  const masterAbilities = loadEntryMap('abilities.ts', 'Abilities', { silent: true });
   if (!Object.keys(masterItems).length) {
     console.error('Failed to parse master items.ts');
     process.exit(1);
@@ -505,25 +572,75 @@ async function build() {
       process.exit(1);
     }
 
-    // Validate all mod directories exist
+    /*
+     * Each per-mod file is optional.  A mod is allowed to ship only
+     * some of {formats-data.ts, learnsets.ts, items.ts, abilities.ts};
+     * missing files are treated as "mod does not define this file"
+     * and the build gracefully falls back to the next modDir in
+     * array order (which is the latest, matching the "last directory
+     * wins" merge semantics) or, for items/abilities, to the master
+     * default config.
+     *
+     * Per-file coverage is tracked across all modDirs so we can
+     * surface partial mods in the build log and fail loudly only
+     * when no provider exists for a mandatory file (formats-data.ts
+     * is mandatory because the regulation has no roster without it).
+     */
+    const coverage = { formats: false, learnsets: false, items: false, abilities: false };
     for (const md of modDirs) {
       const modDirPath = path.join(PS_ROOT, 'data', 'mods', md);
-      const formatsPath = path.join(modDirPath, 'formats-data.ts');
-      const learnsetsPath = path.join(modDirPath, 'learnsets.ts');
-      if (!fs.existsSync(formatsPath)) {
-        console.error('Cannot find', formatsPath);
-        process.exit(1);
-      }
-      if (!fs.existsSync(learnsetsPath)) {
-        console.error('Cannot find', learnsetsPath);
-        process.exit(1);
+      for (const f of ['formats-data.ts', 'learnsets.ts', 'items.ts', 'abilities.ts']) {
+        if (fs.existsSync(path.join(modDirPath, f))) {
+          if (f === 'formats-data.ts') coverage.formats = true;
+          else if (f === 'learnsets.ts') coverage.learnsets = true;
+          else if (f === 'items.ts') coverage.items = true;
+          else if (f === 'abilities.ts') coverage.abilities = true;
+        }
       }
     }
+    for (const md of modDirs) {
+      const modDirPath = path.join(PS_ROOT, 'data', 'mods', md);
+      if (!fs.existsSync(modDirPath)) {
+        console.warn(`  mod directory mods/${md} not found - this modDir will contribute nothing to "${config.key}"`);
+        continue;
+      }
+      for (const [file, key] of [
+        ['formats-data.ts', 'formats'],
+        ['learnsets.ts', 'learnsets'],
+        ['items.ts', 'items'],
+        ['abilities.ts', 'abilities'],
+      ]) {
+        if (!fs.existsSync(path.join(modDirPath, file))) {
+          console.warn(`  mod "${md}" has no ${file} - not defined by this mod`);
+        }
+      }
+    }
+    if (!coverage.formats) {
+      console.error(
+        `Regulation "${config.key}" has no formats-data.ts in any modDir ` +
+        `(${modDirs.join(', ')}); the regulation would have no roster.`
+      );
+      process.exit(1);
+    }
+    if (!coverage.learnsets) {
+      // Not fatal: a regulation without learnset data still loads,
+      // its roster just won't have moves attached.  Surface as a
+      // warning so it's visible in the build log.
+      console.warn(
+        `  Regulation "${config.key}" has no learnsets.ts in any modDir ` +
+        `(${modDirs.join(', ')}); an empty learnsets.json will be emitted.`
+      );
+    }
 
-    // Merge formats-data from all modDirs (later wins on conflict)
+    // Merge formats-data from all modDirs (later wins on conflict).
+    // Each mod's file is read only if it exists - a missing file just
+    // means that mod doesn't define this data and we fall back to
+    // whatever earlier modDir provided it (or skip the file entirely
+    // if none do, which the coverage check above already handled).
     let parsed = {};
     for (const md of modDirs) {
-      const formatsPath = path.join(PS_ROOT, 'data', 'mods', md, 'formats-data.ts');
+      const formatsPath = readModFileIfExists(md, 'formats-data.ts', 'formats-data');
+      if (!formatsPath) continue;
       const entries = parseFormatsData(formatsPath, 'FormatsData');
       if (!entries) {
         console.error('Failed to parse', formatsPath);
@@ -536,10 +653,14 @@ async function build() {
     const ids = deriveRosterIds(parsed, excludedSet);
     const { names, unresolved } = resolveNames(ids, nameMap);
 
-    // Merge learnsets from all modDirs (later wins on conflict)
+    // Merge learnsets from all modDirs (later wins on conflict).
+    // Same fallback semantics as formats-data: a missing file is
+    // "mod does not define learnsets", and we let later modDirs or
+    // the earlier modDir provide the data.
     let modLearnsets = {};
     for (const md of modDirs) {
-      const learnsetsPath = path.join(PS_ROOT, 'data', 'mods', md, 'learnsets.ts');
+      const learnsetsPath = readModFileIfExists(md, 'learnsets.ts', 'learnsets');
+      if (!learnsetsPath) continue;
       const entries = parseLearnsets(learnsetsPath, 'Learnsets') || {};
       Object.assign(modLearnsets, entries);
     }
@@ -547,7 +668,10 @@ async function build() {
       buildRegulationLearnsets(modLearnsets, formToBase, ids);
     const { slim } = slimLearnsets(regLearnsets);
 
-    // Apply items/abilities patches from all modDirs in order (later wins)
+    // Apply items/abilities patches from all modDirs in order
+    // (later wins).  loadEntryMap already treats a missing per-mod
+    // file as "mod does not define this file" and contributes no
+    // patches; the master allowlist remains the default.
     let regItemsPatch = {};
     let regAbilitiesPatch = {};
     for (const md of modDirs) {
@@ -574,12 +698,29 @@ async function build() {
 
     const totalMoves = Object.values(slim).reduce((s, ids) => s + ids.length, 0);
 
+    // Summary of which files contributed to this regulation, so a
+    // partial mod is visible at a glance instead of having to grep
+    // through warnings.
+    const contributedFrom = [];
+    for (const md of modDirs) {
+      const modDirPath = path.join(PS_ROOT, 'data', 'mods', md);
+      if (!fs.existsSync(modDirPath)) continue;
+      const present = ['formats-data.ts', 'learnsets.ts', 'items.ts', 'abilities.ts']
+        .filter((f) => fs.existsSync(path.join(modDirPath, f)))
+        .map((f) => f.replace('.ts', ''));
+      if (present.length) {
+        contributedFrom.push(`${md}[${present.join(',')}]`);
+      } else {
+        contributedFrom.push(`${md}[none]`);
+      }
+    }
+
     console.log(
       `${config.key}.js: ${names.length} pokemon, ${legalItemIds.size} items, ${legalAbilityIds.size} abilities, ${config.isNonstandard.length} blocked tags`
     );
     console.log(
       `    (items: ${itemsChanged} patched by mod; abilities: ${abilitiesChanged} patched by mod)` +
-      (modDirs.length > 1 ? ` [${modDirs.length} modDirs merged: ${modDirs.join(', ')}]` : '')
+      ` [modDirs: ${contributedFrom.join(', ')}]`
     );
     console.log(
       `  regulations/${config.key}/learnsets.json: ${Object.keys(slim).length} species (${merged} merged, ${inherited} inherited), ${totalMoves} moves, ${(bytes / 1024).toFixed(1)} KB`
