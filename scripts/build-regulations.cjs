@@ -466,20 +466,18 @@ async function build() {
 
   const builtKeys = [];
   let upstreamLoaded = false;
+  let offlineMode = false;
   let nameMap;
   let formToBase;
   let masterItems;
   let masterAbilities;
 
   function ensureUpstreamLoaded() {
-    if (upstreamLoaded) return;
+    if (upstreamLoaded) return true;
+    if (offlineMode) return false;
     if (!fs.existsSync(PS_ROOT)) {
-      console.error(
-        'upstream source not found at', PS_ROOT, '\n' +
-        '  run `npm run fetch` to populate scripts/.cache/upstream, or\n' +
-        '  set POKEMON_SHOWDOWN_LOCAL to a local checkout of pokemon-showdown.'
-      );
-      process.exit(1);
+      offlineMode = true;
+      return false;
     }
 
     nameMap = loadNameMap();
@@ -500,6 +498,7 @@ async function build() {
       process.exit(1);
     }
     upstreamLoaded = true;
+    return true;
   }
 
   for (const config of REGULATIONS) {
@@ -527,7 +526,20 @@ async function build() {
       continue;
     }
 
-    ensureUpstreamLoaded();
+    const hasUpstream = ensureUpstreamLoaded();
+    if (!hasUpstream) {
+      const bundlePath = path.join(OUT_DIR, config.key + '.js');
+      const learnsetPath = path.join(PUBLIC_REG_DIR, config.key, 'learnsets.json');
+      const hasBundle = fs.existsSync(bundlePath);
+      const hasLearnset = fs.existsSync(learnsetPath);
+      if (!hasBundle || !hasLearnset) {
+        console.warn(`  Note: ${config.key} missing prebuilt files; skipping in offline mode.`);
+        continue;
+      }
+      console.log(`${config.key}.js: OFFLINE (skipping build, preserving existing bundle + learnset)`);
+      builtKeys.push(config.key);
+      continue;
+    }
 
     const modDirs = normalizeModDirs(config.modDir);
     if (modDirs.length === 0) {

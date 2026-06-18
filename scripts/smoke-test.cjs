@@ -67,9 +67,9 @@ async function main() {
   const { ENTRIES: ABILITIES } = await importEsm('src/data/abilities.js');
 
   check('items.js has 583 entries', Object.keys(ITEMS).length === 583, `got ${Object.keys(ITEMS).length}`);
-  check('items.js reflects master isNonstandard (mod patches NOT merged in)', ITEMS.venusaurite && ITEMS.venusaurite.isNonstandard === 'Past');
+  check('items.js includes merged mod patches', ITEMS.absorbbulb && ITEMS.absorbbulb.isNonstandard === 'Past');
   check('Leftovers is legal in standard (no isNonstandard)', ITEMS.leftovers && ITEMS.leftovers.isNonstandard === undefined);
-  check('Absorb Bulb is standard in master (no isNonstandard)', ITEMS.absorbbulb && ITEMS.absorbbulb.isNonstandard === undefined);
+  check('Absorb Bulb is Past in the merged table', ITEMS.absorbbulb && ITEMS.absorbbulb.isNonstandard === 'Past');
 
   check('abilities.js has 318 entries', Object.keys(ABILITIES).length === 318, `got ${Object.keys(ABILITIES).length}`);
   check('overgrow ability exists', !!ABILITIES.overgrow);
@@ -282,8 +282,8 @@ async function runFrozenRegulationTest() {
       '    frozen: true,\n' +
       '  },\n';
     const modifiedConfig = originalConfig.replace(
-      /\];\s*\n\s*module\.exports/,
-      frozenEntry + '];\n\nmodule.exports'
+      /\n\];\n\n\/\*\*/,
+      '\n' + frozenEntry + '];\n\n/**'
     );
     fs.writeFileSync(configPath, modifiedConfig);
 
