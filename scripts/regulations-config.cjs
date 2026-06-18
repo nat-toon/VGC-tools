@@ -113,7 +113,7 @@ const REGULATIONS = [
   {
     key: "m-a",
     label: "Regulation M-A",
-    modDir: "championsregma",
+    modDir: ["champions", "championsregma"],
     isNonstandard: ["Past", "LGPE", "Future", "CAP", "Unobtainable", "Custom"],
     excludedRosterNonstandard: ["Past", "Future", "LGPE", "Unobtainable", "Custom"],
   },
