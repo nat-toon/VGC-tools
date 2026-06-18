@@ -283,12 +283,12 @@ async function runFrozenRegulationTest() {
       '  },\n';
     // The config file closes REGULATIONS, then immediately starts the docs block.
     // Use that boundary to inject a temporary frozen entry without parsing JS.
-    const marker = '\n];\n\n/**';
+    const marker = '\n];\n\n';
     const markerIndex = originalConfig.indexOf(marker);
     if (markerIndex === -1) throw new Error('Could not find REGULATIONS array terminator');
     const prefix = originalConfig.slice(0, markerIndex);
     const suffix = originalConfig.slice(markerIndex + marker.length);
-    const modifiedConfig = prefix + '\n' + frozenEntry + marker + suffix;
+    const modifiedConfig = prefix + '\n' + frozenEntry + '];\n\n' + suffix;
     fs.writeFileSync(configPath, modifiedConfig);
 
     const r = spawnSync(process.execPath, [path.join(SCRIPTS, 'build-regulations.cjs')], { stdio: 'pipe' });
