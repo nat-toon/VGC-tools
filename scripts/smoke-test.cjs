@@ -281,7 +281,8 @@ async function runFrozenRegulationTest() {
       '    excludedRosterNonstandard: ["Past"],\n' +
       '    frozen: true,\n' +
       '  },\n';
-    // Insert the frozen entry just before the closing REGULATIONS array.
+    // The config file closes REGULATIONS, then immediately starts the docs block.
+    // Use that boundary to inject a temporary frozen entry without parsing JS.
     const marker = '\n];\n\n/**';
     const markerIndex = originalConfig.indexOf(marker);
     if (markerIndex === -1) throw new Error('Could not find REGULATIONS array terminator');
