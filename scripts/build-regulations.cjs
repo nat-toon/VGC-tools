@@ -467,10 +467,10 @@ async function build() {
   const builtKeys = [];
   let upstreamLoaded = false;
   let offlineMode = false;
-  let nameMap;
-  let formToBase;
-  let masterItems;
-  let masterAbilities;
+  let nameMap = null;
+  let formToBase = null;
+  let masterItems = null;
+  let masterAbilities = null;
 
   function ensureUpstreamLoaded() {
     if (upstreamLoaded) return true;

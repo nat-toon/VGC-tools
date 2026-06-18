@@ -281,10 +281,14 @@ async function runFrozenRegulationTest() {
       '    excludedRosterNonstandard: ["Past"],\n' +
       '    frozen: true,\n' +
       '  },\n';
-    const modifiedConfig = originalConfig.replace(
-      /\n\];\n\n\/\*\*/,
-      '\n' + frozenEntry + '];\n\n/**'
-    );
+    // Insert the frozen entry just before the closing REGULATIONS array.
+    const marker = '\n];\n\n/**';
+    const markerIndex = originalConfig.indexOf(marker);
+    if (markerIndex === -1) throw new Error('Could not find REGULATIONS array terminator');
+    const modifiedConfig =
+      originalConfig.slice(0, markerIndex) +
+      '\n' + frozenEntry + '];\n\n/**' +
+      originalConfig.slice(markerIndex + marker.length);
     fs.writeFileSync(configPath, modifiedConfig);
 
     const r = spawnSync(process.execPath, [path.join(SCRIPTS, 'build-regulations.cjs')], { stdio: 'pipe' });
