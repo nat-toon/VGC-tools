@@ -3,7 +3,7 @@
 //
 // Slimmed data extracted from scripts/.cache/upstream/data/{items,abilities}.ts
 // (fetched from https://raw.githubusercontent.com/smogon/pokemon-showdown)
-// with per-regulation patches merged: `champions`.
+// with per-regulation patches merged: `champions`, `champions`.
 // text descriptions sourced from `scripts/.cache/upstream/data/text/abilities.ts`.
 
 export const ENTRIES = Object.freeze({
@@ -68,6 +68,7 @@ export const ENTRIES = Object.freeze({
   "dryskin": {"name":"Dry Skin","num":87,"desc":"This Pokemon is immune to Water-type moves and restores 1/4 of its maximum HP, rounded down, when hit by a Water-type move. The power of Fire-type moves is multiplied by 1.25 when used on this Pokemon. At the end of each turn, this Pokemon restores 1/8 of its maximum HP, rounded down, if the weather is Rain Dance, and loses 1/8 of its maximum HP, rounded down, if the weather is Sunny Day. The weather effects are prevented if this Pokemon is holding a Utility Umbrella.","shortDesc":"This Pokemon is healed 1/4 by Water, 1/8 by Rain; is hurt 1.25x by Fire, 1/8 by Sun."},
   "earlybird": {"name":"Early Bird","num":48,"shortDesc":"This Pokemon's sleep counter drops by 2 instead of 1."},
   "eartheater": {"name":"Earth Eater","num":297,"desc":"This Pokemon is immune to Ground-type moves and restores 1/4 of its maximum HP, rounded down, when hit by a Ground-type move.","shortDesc":"This Pokemon heals 1/4 of its max HP when hit by Ground moves; Ground immunity."},
+  "eelevate": {"name":"Eelevate","num":313,"isNonstandard":null,"desc":"This Pokemon is immune to Ground-type attacks and the effects of Spikes, Toxic Spikes, Sticky Web, and the Arena Trap Ability. The effects of Gravity, Ingrain, Smack Down, Thousand Arrows, and Iron Ball nullify the immunity. Thousand Arrows can hit this Pokemon as if it did not have this Ability. This Pokemon's highest stat is raised by 1 stage if it attacks and knocks out another Pokemon. Stat stage changes are not considered. If multiple stats are tied, Attack, Defense, Special Attack, Special Defense, and Speed are prioritized in that order.","shortDesc":"This Pokemon is immune to Ground; +1 to highest stat if it KOes another Pokemon."},
   "effectspore": {"name":"Effect Spore","num":27,"desc":"30% chance a Pokemon making contact with this Pokemon will be poisoned, paralyzed, or fall asleep.","shortDesc":"30% chance of poison/paralysis/sleep on others making contact with this Pokemon."},
   "electricsurge": {"name":"Electric Surge","num":226,"shortDesc":"On switch-in, this Pokemon summons Electric Terrain."},
   "electromorphosis": {"name":"Electromorphosis","num":280,"shortDesc":"This Pokemon gains the Charge effect when it takes a hit from an attack."},
@@ -78,6 +79,7 @@ export const ENTRIES = Object.freeze({
   "emergencyexit": {"name":"Emergency Exit","num":194,"desc":"When this Pokemon has more than 1/2 its maximum HP and takes damage bringing it to 1/2 or less of its maximum HP, it immediately switches out to a chosen ally. This effect applies after all hits from a multi-hit move. This effect is prevented if the move had a secondary effect removed by the Sheer Force Ability. This effect applies to both direct and indirect damage, except Curse and Substitute on use, Belly Drum, Pain Split, and confusion damage.","shortDesc":"This Pokemon switches out when it reaches 1/2 or less of its maximum HP."},
   "fairyaura": {"name":"Fairy Aura","num":187,"desc":"While this Pokemon is active, the power of Fairy-type moves used by active Pokemon is multiplied by 1.33.","shortDesc":"While this Pokemon is active, a Fairy move used by any Pokemon has 1.33x power."},
   "filter": {"name":"Filter","num":111,"shortDesc":"This Pokemon receives 3/4 damage from supereffective attacks."},
+  "firemane": {"name":"Fire Mane","num":316,"isNonstandard":null,"shortDesc":"This Pokemon's offensive stat is multiplied by 1.5 while using a Fire-type attack."},
   "flamebody": {"name":"Flame Body","num":49,"shortDesc":"30% chance a Pokemon making contact with this Pokemon will be burned."},
   "flareboost": {"name":"Flare Boost","num":138,"desc":"While this Pokemon is burned, the power of its special attacks is multiplied by 1.5.","shortDesc":"While this Pokemon is burned, its special attacks have 1.5x power."},
   "flashfire": {"name":"Flash Fire","num":18,"desc":"This Pokemon is immune to Fire-type moves. The first time it is hit by a Fire-type move, its offensive stat is multiplied by 1.5 while using a Fire-type attack as long as it remains active and has this Ability. If this Pokemon is frozen, it cannot be defrosted by Fire-type attacks.","shortDesc":"This Pokemon's Fire attacks do 1.5x damage if hit by one Fire move; Fire immunity."},

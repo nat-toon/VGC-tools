@@ -3,7 +3,7 @@
 //
 // Slimmed data extracted from scripts/.cache/upstream/data/{items,abilities}.ts
 // (fetched from https://raw.githubusercontent.com/smogon/pokemon-showdown)
-// with per-regulation patches merged: `champions`.
+// with per-regulation patches merged: `champions`, `champions`, `championsregma`.
 // text descriptions sourced from `scripts/.cache/upstream/data/text/items.ts`.
 
 export const ENTRIES = Object.freeze({
@@ -109,7 +109,7 @@ export const ENTRIES = Object.freeze({
   "domefossil": {"name":"Dome Fossil","num":102,"gen":3,"isNonstandard":"Past","spritenum":102,"shortDesc":"Can be revived into Kabuto."},
   "dousedrive": {"name":"Douse Drive","num":116,"gen":5,"isNonstandard":"Past","spritenum":103,"shortDesc":"Holder's Techno Blast is Water type."},
   "dracoplate": {"name":"Draco Plate","num":311,"gen":4,"spritenum":105,"shortDesc":"Holder's Dragon-type attacks have 1.2x power. Judgment is Dragon type.","isNonstandard":"Past"},
-  "dragalgite": {"name":"Dragalgite","num":2582,"gen":9,"isNonstandard":"Past","spritenum":565,"shortDesc":"If held by a Dragalge, this item allows it to Mega Evolve in battle."},
+  "dragalgite": {"name":"Dragalgite","num":2582,"gen":9,"isNonstandard":"Future","spritenum":565,"shortDesc":"If held by a Dragalge, this item allows it to Mega Evolve in battle."},
   "dragonfang": {"name":"Dragon Fang","num":250,"gen":2,"spritenum":106,"shortDesc":"Holder's Dragon-type attacks have 1.2x power."},
   "dragongem": {"name":"Dragon Gem","num":561,"gen":5,"isNonstandard":"Past","spritenum":107,"shortDesc":"Holder's first successful Dragon-type attack will have 1.3x power. Single use."},
   "dragoninite": {"name":"Dragoninite","num":2562,"gen":9,"isNonstandard":null,"spritenum":547,"shortDesc":"If held by a Dragonite, this item allows it to Mega Evolve in battle."},
@@ -124,7 +124,7 @@ export const ENTRIES = Object.freeze({
   "duskball": {"name":"Dusk Ball","num":13,"gen":4,"spritenum":115,"shortDesc":"A Poke Ball that makes it easier to catch wild Pokemon at night or in caves.","isNonstandard":"Past"},
   "duskstone": {"name":"Dusk Stone","num":108,"gen":4,"spritenum":116,"desc":"Evolves Murkrow into Honchkrow, Misdreavus into Mismagius, Lampent into Chandelure, and Doublade into Aegislash when used.","shortDesc":"Evolves certain species of Pokemon when used.","isNonstandard":"Past"},
   "earthplate": {"name":"Earth Plate","num":305,"gen":4,"spritenum":117,"shortDesc":"Holder's Ground-type attacks have 1.2x power. Judgment is Ground type.","isNonstandard":"Past"},
-  "eelektrossite": {"name":"Eelektrossite","num":2573,"gen":9,"isNonstandard":"Past","spritenum":556,"shortDesc":"If held by an Eelektross, this item allows it to Mega Evolve in battle."},
+  "eelektrossite": {"name":"Eelektrossite","num":2573,"gen":9,"isNonstandard":"Future","spritenum":556,"shortDesc":"If held by an Eelektross, this item allows it to Mega Evolve in battle."},
   "eeviumz": {"name":"Eevium Z","num":805,"gen":7,"isNonstandard":"Past","spritenum":657,"shortDesc":"If held by an Eevee with Last Resort, it can use Extreme Evoboost."},
   "ejectbutton": {"name":"Eject Button","num":547,"gen":5,"spritenum":118,"shortDesc":"If holder survives a hit, it immediately switches out to a chosen ally. Single use.","isNonstandard":"Past"},
   "ejectpack": {"name":"Eject Pack","num":1119,"gen":8,"spritenum":714,"shortDesc":"If the holder's stat stages are lowered, it switches to a chosen ally. Single use.","isNonstandard":"Past"},
@@ -142,7 +142,7 @@ export const ENTRIES = Object.freeze({
   "fairyfeather": {"name":"Fairy Feather","num":2401,"gen":9,"spritenum":754,"shortDesc":"Holder's Fairy-type attacks have 1.2x power."},
   "fairygem": {"name":"Fairy Gem","num":715,"gen":6,"isNonstandard":"Past","spritenum":611,"shortDesc":"Holder's first successful Fairy-type attack will have 1.3x power. Single use."},
   "fairymemory": {"name":"Fairy Memory","num":920,"gen":7,"isNonstandard":"Past","spritenum":684,"shortDesc":"Holder's Multi-Attack is Fairy type."},
-  "falinksite": {"name":"Falinksite","num":2587,"gen":9,"isNonstandard":"Past","spritenum":570,"shortDesc":"If held by a Falinks, this item allows it to Mega Evolve in battle."},
+  "falinksite": {"name":"Falinksite","num":2587,"gen":9,"isNonstandard":"Future","spritenum":570,"shortDesc":"If held by a Falinks, this item allows it to Mega Evolve in battle."},
   "fastball": {"name":"Fast Ball","num":492,"gen":2,"spritenum":137,"shortDesc":"A Poke Ball that makes it easier to catch Pokemon which are quick to run away.","isNonstandard":"Past"},
   "feraligite": {"name":"Feraligite","num":2564,"gen":9,"isNonstandard":null,"spritenum":549,"shortDesc":"If held by a Feraligatr, this item allows it to Mega Evolve in battle."},
   "fightinggem": {"name":"Fighting Gem","num":553,"gen":5,"isNonstandard":"Past","spritenum":139,"shortDesc":"Holder's first successful Fighting-type attack will have 1.3x power. Single use."},

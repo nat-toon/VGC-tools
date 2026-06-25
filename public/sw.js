@@ -1,4 +1,4 @@
-const CACHE_NAME = "pokemon-tools-v1";
+const CACHE_NAME = "pokemon-tools-v2";
 const PRECACHE = [
   "/",
   "/index.html",
@@ -35,8 +35,11 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        // Only cache same-origin responses to avoid OpaqueResponseBlocking
+        if (res.ok && new URL(e.request.url).origin === self.location.origin) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        }
         return res;
       })
       .catch(() => caches.match(e.request)),
