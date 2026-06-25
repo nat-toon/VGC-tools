@@ -26,7 +26,7 @@
  */
 
 const SPRITE_BASE = "https://play.pokemonshowdown.com/sprites/";
-const POKEMON_ICONS_URL = SPRITE_BASE + "pokemonicons-sheet.png?v22";
+const POKEMON_ICONS_URL = SPRITE_BASE + "pokemonicons-sheet.png?v23";
 const SPRITE_DIRS = ["home-centered", "gen5"];
 const SPRITE_SIZE = 96;
 const ICON_W = 40;

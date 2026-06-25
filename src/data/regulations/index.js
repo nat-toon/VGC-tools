@@ -6,4 +6,5 @@
 // `export * as m_a from "./m-a.js"`).  src/lib/regulations.js
 // iterates the namespaces at startup to build REGULATIONS.
 
+export * as m_b from "./m-b.js";
 export * as m_a from "./m-a.js";
