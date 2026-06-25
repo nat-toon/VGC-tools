@@ -4,15 +4,17 @@ import PokemonSlotEditor from "../components/PokemonSlotEditor.jsx";
 import TypeIcon from "../components/TypeIcon.jsx";
 import Icon from "../components/Icon.jsx";
 import Sprite from "../components/Sprite.jsx";
+import Modal from "../components/Modal.jsx";
 import { getTeam, updateTeam } from "../lib/teams.js";
 import { loadPokedex } from "../lib/pokedex.js";
 import { getAllItems } from "../lib/items.js";
-import { loadMoves, getMove } from "../lib/moves.js";
+import { loadMoves, getMove, getAllMoves } from "../lib/moves.js";
 import { loadLearnsets } from "../lib/learnsets.js";
 import { REGULATIONS } from "../lib/regulations.js";
 import { getLargeSprite, getIcon, getItemIcon } from "../lib/sprite.js";
 import { STAT_CONFIG, NATURE_MAP } from "../lib/constants.js";
 import { calcFinalStatsSP, statRangeSP, DEFAULT_LEVEL } from "../lib/stats.js";
+import { exportTeam, importTeam } from "../lib/showdown.js";
 
 export default function TeamDetailPage() {
   const { id, slot } = useParams();
@@ -27,6 +29,10 @@ export default function TeamDetailPage() {
   const [failedSprites, setFailedSprites] = useState({});
   const nameInputRef = useRef(null);
   const editingSlot = slot !== undefined ? Number(slot) : null;
+  const [showImportExport, setShowImportExport] = useState(false);
+  const [modalText, setModalText] = useState("");
+  const [importErrors, setImportErrors] = useState([]);
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     Promise.all([loadPokedex(), loadMoves()])
@@ -128,6 +134,34 @@ export default function TeamDetailPage() {
     loadLearnsets(newReg).catch(() => {});
   }, [team]);
 
+  const handleOpenModal = useCallback(() => {
+    const text = exportTeam(team, pokedexMap, getAllItems(), getAllMoves() || []);
+    setModalText(text);
+    setImportErrors([]);
+    setShowImportExport(true);
+  }, [team, pokedexMap]);
+
+  const handleApply = useCallback(() => {
+    const allItems = getAllItems();
+    const allMovesArr = getAllMoves() || [];
+    const result = importTeam(modalText, pokedexMap, allItems, allMovesArr);
+    if (result.pokemon.length > 0) {
+      updateTeam(team.id, { pokemon: result.pokemon });
+      setTeam((prev) => prev ? { ...prev, pokemon: result.pokemon, updatedAt: Date.now() } : prev);
+      setImportErrors(result.errors);
+      if (result.errors.length === 0) {
+        setShowImportExport(false);
+      }
+    } else {
+      setImportErrors(result.errors.length > 0 ? result.errors : ["No Pokemon could be parsed from the input."]);
+    }
+  }, [modalText, pokedexMap, team]);
+
+  const handleCancel = useCallback(() => {
+    setShowImportExport(false);
+    setImportErrors([]);
+  }, []);
+
   if (!loaded) {
     return <div className="loading-text">Loading…</div>;
   }
@@ -210,8 +244,40 @@ export default function TeamDetailPage() {
               <option key={key} value={key}>{reg.label}</option>
             ))}
           </select>
+          <button className="pd-import-export-btn" onClick={handleOpenModal}>
+            Import / Export
+          </button>
         </div>
       </div>
+
+      <Modal open={showImportExport} onClose={handleCancel} labelledBy="import-export-title">
+        <div className="sd-modal-body">
+          <h3 id="import-export-title">Import / Export Team</h3>
+          <textarea
+            ref={textareaRef}
+            className="sd-textarea"
+            value={modalText}
+            onChange={(e) => setModalText(e.target.value)}
+            rows={14}
+          />
+          {importErrors.length > 0 && (
+            <div className="sd-errors">
+              {importErrors.map((err, i) => (
+                <p key={i} className="sd-error">{err}</p>
+              ))}
+            </div>
+          )}
+          <div className="sd-modal-actions">
+            <button className="sd-btn" onClick={handleCancel}>
+              Cancel
+            </button>
+            <button className="sd-btn sd-btn--primary" onClick={handleApply}>
+              Apply
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       <div className="pd-pokemon-list">
         {team.pokemon.map((slot, i) => {
           const mon = slot.name ? pokedexMap[slot.name.toLowerCase()] : null;
