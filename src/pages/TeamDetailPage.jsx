@@ -15,6 +15,9 @@ import { getLargeSprite, getIcon, getItemIcon } from "../lib/sprite.js";
 import { STAT_CONFIG, NATURE_MAP } from "../lib/constants.js";
 import { calcFinalStatsSP, statRangeSP, DEFAULT_LEVEL } from "../lib/stats.js";
 import { exportTeam, importTeam } from "../lib/showdown.js";
+import TeamWeaknesses from "../components/TeamWeaknesses.jsx";
+import TeamCoverage from "../components/TeamCoverage.jsx";
+import TeamSpeed from "../components/TeamSpeed.jsx";
 
 export default function TeamDetailPage() {
   const { id, slot } = useParams();
@@ -33,6 +36,7 @@ export default function TeamDetailPage() {
   const [modalText, setModalText] = useState("");
   const [importErrors, setImportErrors] = useState([]);
   const textareaRef = useRef(null);
+  const [view, setView] = useState("roster");
 
   useEffect(() => {
     Promise.all([loadPokedex(), loadMoves()])
@@ -215,10 +219,10 @@ export default function TeamDetailPage() {
   return (
     <div className="team-detail-page">
       <div className="pd-header">
-        <button className="pd-back-btn" onClick={() => navigate("/teambuilder")}>
-          Back
-        </button>
-        <div className="pd-header-info">
+        <div className="pd-header-top">
+          <button className="pd-back-btn" onClick={() => navigate("/teambuilder")}>
+            Back
+          </button>
           {editingName ? (
             <input
               ref={nameInputRef}
@@ -235,6 +239,8 @@ export default function TeamDetailPage() {
               {team.name}
             </h2>
           )}
+        </div>
+        <div className="pd-header-info">
           <select
             className="pd-team-reg-select"
             value={team.regulation}
@@ -248,6 +254,33 @@ export default function TeamDetailPage() {
             Import / Export
           </button>
         </div>
+      </div>
+
+      <div className="pd-view-tabs">
+        <button
+          className={`pd-view-tab ${view === "roster" ? "active" : ""}`}
+          onClick={() => setView("roster")}
+        >
+          Roster
+        </button>
+        <button
+          className={`pd-view-tab ${view === "weaknesses" ? "active" : ""}`}
+          onClick={() => setView("weaknesses")}
+        >
+          Weaknesses
+        </button>
+        <button
+          className={`pd-view-tab ${view === "coverage" ? "active" : ""}`}
+          onClick={() => setView("coverage")}
+        >
+          Coverage
+        </button>
+        <button
+          className={`pd-view-tab ${view === "speed" ? "active" : ""}`}
+          onClick={() => setView("speed")}
+        >
+          Speed
+        </button>
       </div>
 
       <Modal open={showImportExport} onClose={handleCancel} labelledBy="import-export-title">
@@ -278,149 +311,157 @@ export default function TeamDetailPage() {
         </div>
       </Modal>
 
-      <div className="pd-pokemon-list">
-        {team.pokemon.map((slot, i) => {
-          const mon = slot.name ? pokedexMap[slot.name.toLowerCase()] : null;
-          const natureObj = slot.nature ? NATURE_MAP[slot.nature] : null;
-          let previewStats = null;
-          if (mon?.baseStats) {
-            const sp = slot.sp || { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
-            previewStats = calcFinalStatsSP(mon.baseStats, sp, natureObj, slot.level ?? DEFAULT_LEVEL);
-          }
-          return (
-            <div
-              key={i}
-              className="pd-pokemon-slot pd-pokemon-slot--clickable"
-              onClick={() => navigate(`/teambuilder/${id}/${i}`)}
-              onKeyDown={(e) => { if (e.key === "Enter") navigate(`/teambuilder/${id}/${i}`); }}
-              tabIndex={0}
-              role="button"
-            >
-              <div className="pd-slot-actions">
-                <button
-                  className="pd-slot-action"
-                  onClick={(e) => { e.stopPropagation(); handleMoveSlot(i, -1); }}
-                  disabled={i === 0}
-                  title="Move up"
-                >▲</button>
-                <button
-                  className="pd-slot-action"
-                  onClick={(e) => { e.stopPropagation(); handleMoveSlot(i, 1); }}
-                  disabled={i === team.pokemon.length - 1}
-                  title="Move down"
-                >▼</button>
-                <button
-                  className="pd-slot-action pd-slot-action--delete"
-                  onClick={(e) => { e.stopPropagation(); handleDeleteSlot(i); }}
-                  title="Clear slot"
-                >×</button>
-              </div>
-              {mon ? (
-                <div className="se-display">
-                  <div className="se-left">
-                    <div className="se-left-top">
-                      <div className="se-sprite">
+      {view === "roster" ? (
+        <div className="pd-pokemon-list">
+          {team.pokemon.map((slot, i) => {
+            const mon = slot.name ? pokedexMap[slot.name.toLowerCase()] : null;
+            const natureObj = slot.nature ? NATURE_MAP[slot.nature] : null;
+            let previewStats = null;
+            if (mon?.baseStats) {
+              const sp = slot.sp || { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
+              previewStats = calcFinalStatsSP(mon.baseStats, sp, natureObj, slot.level ?? DEFAULT_LEVEL);
+            }
+            return (
+              <div
+                key={i}
+                className="pd-pokemon-slot pd-pokemon-slot--clickable"
+                onClick={() => navigate(`/teambuilder/${id}/${i}`)}
+                onKeyDown={(e) => { if (e.key === "Enter") navigate(`/teambuilder/${id}/${i}`); }}
+                tabIndex={0}
+                role="button"
+              >
+                <div className="pd-slot-actions">
+                  <button
+                    className="pd-slot-action"
+                    onClick={(e) => { e.stopPropagation(); handleMoveSlot(i, -1); }}
+                    disabled={i === 0}
+                    title="Move up"
+                  >▲</button>
+                  <button
+                    className="pd-slot-action"
+                    onClick={(e) => { e.stopPropagation(); handleMoveSlot(i, 1); }}
+                    disabled={i === team.pokemon.length - 1}
+                    title="Move down"
+                  >▼</button>
+                  <button
+                    className="pd-slot-action pd-slot-action--delete"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteSlot(i); }}
+                    title="Clear slot"
+                  >×</button>
+                </div>
+                {mon ? (
+                  <div className="se-display">
+                    <div className="se-left">
+                      <div className="se-left-top">
+                        <div className="se-sprite">
+                          {(() => {
+                            const sprite = getLargeSprite(mon);
+                            const icon = getIcon(mon);
+                            if (failedSprites[i] || !sprite) return <span className="pd-pokemon-icon" style={icon?.css} />;
+                            return (
+                              <Sprite
+                                sprite={sprite}
+                                className="pd-pokemon-img"
+                                alt={mon.name}
+                                loading="lazy"
+                                onError={() => setFailedSprites((prev) => ({ ...prev, [i]: true }))}
+                              />
+                            );
+                          })()}
+                        </div>
+                        <div className="se-display-info">
+                          <div className="se-display-name">{mon.name}</div>
+                          <div className="se-display-types">
+                            {(mon.types || []).map((t) => (
+                              <TypeIcon key={t} type={t} size={16} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="se-meta">
+                      <div className="se-section-header se-item">Item</div>
+                      <div className="se-part se-info-btn se-item">
                         {(() => {
-                          const sprite = getLargeSprite(mon);
-                          const icon = getIcon(mon);
-                          if (failedSprites[i] || !sprite) return <span className="pd-pokemon-icon" style={icon?.css} />;
+                          const itemData = slot.item ? itemsMap[slot.item] : null;
+                          const icon = itemData ? getItemIcon(itemData.spritenum) : null;
                           return (
-                            <Sprite
-                              sprite={sprite}
-                              className="pd-pokemon-img"
-                              alt={mon.name}
-                              loading="lazy"
-                              onError={() => setFailedSprites((prev) => ({ ...prev, [i]: true }))}
-                            />
+                            <>
+                              {icon && <Icon className="item-row-icon" icon={icon} />}
+                              <span className="se-part-value">{itemData ? itemData.name : ""}</span>
+                            </>
                           );
                         })()}
                       </div>
-                      <div className="se-display-info">
-                        <div className="se-display-name">{mon.name}</div>
-                        <div className="se-display-types">
-                          {(mon.types || []).map((t) => (
-                            <TypeIcon key={t} type={t} size={16} />
-                          ))}
-                        </div>
+                      <div className="se-section-header se-ability">Ability</div>
+                      <div className="se-part se-info-btn se-ability">
+                        <span className="se-part-value">{slot.ability || ""}</span>
                       </div>
-                    </div>
-                  </div>
-                  <div className="se-meta">
-                    <div className="se-section-header se-item">Item</div>
-                    <div className="se-part se-info-btn se-item">
-                      {(() => {
-                        const itemData = slot.item ? itemsMap[slot.item] : null;
-                        const icon = itemData ? getItemIcon(itemData.spritenum) : null;
+                      <div className="se-section-header se-moves">Moves</div>
+                      {(slot.moves || [null, null, null, null]).map((m, mi) => {
+                        const move = m ? getMove(m) : null;
                         return (
-                          <>
-                            {icon && <Icon className="item-row-icon" icon={icon} />}
-                            <span className="se-part-value">{itemData ? itemData.name : ""}</span>
-                          </>
+                          <div key={mi} className="se-part se-move-btn">
+                            {move ? (
+                              <>
+                                <TypeIcon type={move.type} size={14} />
+                                <span className="se-move-name">{move.name}</span>
+                              </>
+                            ) : (
+                              <span className="se-part-label"></span>
+                            )}
+                          </div>
                         );
-                      })()}
+                      })}
                     </div>
-                    <div className="se-section-header se-ability">Ability</div>
-                    <div className="se-part se-info-btn se-ability">
-                      <span className="se-part-value">{slot.ability || ""}</span>
-                    </div>
-                    <div className="se-section-header se-moves">Moves</div>
-                    {(slot.moves || [null, null, null, null]).map((m, mi) => {
-                      const move = m ? getMove(m) : null;
-                      return (
-                        <div key={mi} className="se-part se-move-btn">
-                          {move ? (
-                            <>
-                              <TypeIcon type={move.type} size={14} />
-                              <span className="se-move-name">{move.name}</span>
-                            </>
-                          ) : (
-                            <span className="se-part-label"></span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="se-right">
-                    <div className="se-section-header">Stats</div>
-                    <div className="se-part se-stats-btn">
-                      <div className="se-stats-spread">
-                        {STAT_CONFIG.map(({ key, label }) => {
-                          const val = previewStats?.[key] ?? mon.baseStats?.[key] ?? null;
-                          const [min, max] = statRangeSP(key === "hp");
-                          const pct = val == null ? 0 : Math.max(0, Math.min(100, (val / max) * 100));
-                          const hue = val == null ? 0 : Math.min(360, Math.floor((val * 180) / max));
-                          const hint = natureObj?.plus === key ? "+" : natureObj?.minus === key ? "-" : null;
-                          return (
-                            <div key={key} className="se-stat-item">
-                              <span className="se-stat-label">{label}</span>
-                              <div className="se-stat-bar-mini">
-                                <div
-                                  className="se-stat-fill-mini"
-                                  style={{ width: pct + "%", background: `hsl(${hue},85%,45%)` }}
-                                />
+                    <div className="se-right">
+                      <div className="se-section-header">Stats</div>
+                      <div className="se-part se-stats-btn">
+                        <div className="se-stats-spread">
+                          {STAT_CONFIG.map(({ key, label }) => {
+                            const val = previewStats?.[key] ?? mon.baseStats?.[key] ?? null;
+                            const [min, max] = statRangeSP(key === "hp");
+                            const pct = val == null ? 0 : Math.max(0, Math.min(100, (val / max) * 100));
+                            const hue = val == null ? 0 : Math.min(360, Math.floor((val * 180) / max));
+                            const hint = natureObj?.plus === key ? "+" : natureObj?.minus === key ? "-" : null;
+                            return (
+                              <div key={key} className="se-stat-item">
+                                <span className="se-stat-label">{label}</span>
+                                <div className="se-stat-bar-mini">
+                                  <div
+                                    className="se-stat-fill-mini"
+                                    style={{ width: pct + "%", background: `hsl(${hue},85%,45%)` }}
+                                  />
+                                </div>
+                                <span className="se-stat-value">
+                                  {previewStats?.[key] != null && previewStats[key] !== 0 ? previewStats[key] : ""}
+                                </span>
+                                <span
+                                  className={`se-stat-hint ${hint === "+" ? "se-stat-hint--plus" : hint === "-" ? "se-stat-hint--minus" : ""}`}
+                                >
+                                  {hint || ""}
+                                </span>
                               </div>
-                              <span className="se-stat-value">
-                                {previewStats?.[key] != null && previewStats[key] !== 0 ? previewStats[key] : ""}
-                              </span>
-                              <span
-                                className={`se-stat-hint ${hint === "+" ? "se-stat-hint--plus" : hint === "-" ? "se-stat-hint--minus" : ""}`}
-                              >
-                                {hint || ""}
-                              </span>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="pd-slot-empty">Empty Slot #{i + 1}</div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                ) : (
+                  <div className="pd-slot-empty">Empty Slot #{i + 1}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : view === "weaknesses" ? (
+        <TeamWeaknesses team={team} pokedexMap={pokedexMap} />
+      ) : view === "coverage" ? (
+        <TeamCoverage team={team} />
+      ) : (
+        <TeamSpeed team={team} pokedexMap={pokedexMap} allPokemon={allPokemon} />
+      )}
     </div>
   );
 }
