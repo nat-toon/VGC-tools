@@ -27,14 +27,11 @@ const TYPE_CHART = {
   fairy:    { normal:1, fire:.5, water:1, electric:1, grass:1, ice:1, fighting:2, poison:.5, ground:1, flying:1, psychic:1, bug:1, rock:1, ghost:1, dragon:2, dark:2, steel:.5, fairy:1 },
 };
 
-function typeEffectiveness(attackType, defTypes) {
-  let eff = 1;
+function typeEffectiveness(attackType, defA, defB) {
   const chart = TYPE_CHART[attackType];
   if (!chart) return 1;
-  for (const t of defTypes) {
-    eff *= chart[t] ?? 1;
-  }
-  return eff;
+  if (defA === defB) return chart[defA] ?? 1;
+  return (chart[defA] ?? 1) * (chart[defB] ?? 1);
 }
 
 function effLabel(value) {
@@ -106,7 +103,7 @@ export default function TeamCoverage({ team, pokedexMap }) {
       for (const b of TYPES) {
         const pairMoves = validMoves.map((m) => ({
           ...m,
-          eff: m.isStatus ? 1 : typeEffectiveness(m.type, [a, b]),
+          eff: m.isStatus ? 1 : typeEffectiveness(m.type, a, b),
         }));
         const maxEff = Math.max(...pairMoves.map((m) => m.eff));
         detailData[a][b].push({ monName, sprite, moves: pairMoves, bestEff: maxEff });
