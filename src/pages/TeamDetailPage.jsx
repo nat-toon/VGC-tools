@@ -458,7 +458,7 @@ export default function TeamDetailPage() {
       ) : view === "weaknesses" ? (
         <TeamWeaknesses team={team} pokedexMap={pokedexMap} />
       ) : view === "coverage" ? (
-        <TeamCoverage team={team} />
+        <TeamCoverage team={team} pokedexMap={pokedexMap} />
       ) : (
         <TeamSpeed team={team} pokedexMap={pokedexMap} allPokemon={allPokemon} />
       )}
