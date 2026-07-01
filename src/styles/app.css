@@ -4319,6 +4319,15 @@ main {
     color: #fff;
     font-size: 14px;
 }
+.cv-modal-mon-ability {
+    font-size: 10px;
+    color: #959899;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: auto;
+    font-weight: 600;
+}
 .cv-modal-moves {
     display: flex;
     flex-wrap: wrap;

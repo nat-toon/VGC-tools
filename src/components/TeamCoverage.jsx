@@ -5,6 +5,21 @@ import Modal from "./Modal.jsx";
 import { TYPES } from "../lib/constants.js";
 import { getMove } from "../lib/moves.js";
 import { getIcon } from "../lib/sprite.js";
+import { ENTRIES } from "../data/abilities.js";
+
+const ABILITY_MAP = new Map(Object.entries(ENTRIES));
+
+const TYPE_CHANGER_ABILITIES = {
+  pixilate: "fairy",
+  galvanize: "electric",
+  aerilate: "flying",
+  refrigerate: "ice",
+  liquidvoice: "water",
+};
+
+const IMMUNITY_BYPASS = {
+  scrappy: { type: "fighting", defType: "ghost" },
+};
 
 const TYPE_CHART = {
   normal:   { normal:1, fire:1, water:1, electric:1, grass:1, ice:1, fighting:1, poison:1, ground:1, flying:1, psychic:1, bug:1, rock:.5, ghost:0, dragon:1, dark:1, steel:.5, fairy:1 },
@@ -78,10 +93,18 @@ export default function TeamCoverage({ team, pokedexMap }) {
     }
   }
 
+  function getAbilityKey(name) {
+    if (!name) return null;
+    const key = name.toLowerCase().replace(/[\s'-]/g, "");
+    return ABILITY_MAP.has(key) ? key : null;
+  }
+
   slots.forEach((slot) => {
     const mon = pokedexMap?.[slot.name.toLowerCase()];
     const monName = mon?.name || slot.name;
     const sprite = mon ? getIcon(mon) : null;
+    const abilityKey = getAbilityKey(slot.ability);
+    const abilityName = slot.ability || null;
     const moves = slot.moves || [];
 
     const validMoves = [];
@@ -89,9 +112,13 @@ export default function TeamCoverage({ team, pokedexMap }) {
       if (!moveKey) continue;
       const move = getMove(moveKey);
       if (!move) continue;
+      let type = move.category === "Status" ? null : move.type.toLowerCase();
+      if (type === "normal" && abilityKey && TYPE_CHANGER_ABILITIES[abilityKey]) {
+        type = TYPE_CHANGER_ABILITIES[abilityKey];
+      }
       validMoves.push({
         name: move.name,
-        type: move.category === "Status" ? null : move.type.toLowerCase(),
+        type,
         category: move.category,
         isStatus: move.category === "Status",
       });
@@ -101,12 +128,21 @@ export default function TeamCoverage({ team, pokedexMap }) {
 
     for (const a of TYPES) {
       for (const b of TYPES) {
-        const pairMoves = validMoves.map((m) => ({
-          ...m,
-          eff: m.isStatus ? 1 : typeEffectiveness(m.type, a, b),
-        }));
+        const pairMoves = validMoves.map((m) => {
+          let eff = m.isStatus ? 1 : typeEffectiveness(m.type, a, b);
+          if (abilityKey && !m.isStatus && IMMUNITY_BYPASS[abilityKey] && eff === 0) {
+            const bp = IMMUNITY_BYPASS[abilityKey];
+            if (m.type === bp.type) {
+              const chart = TYPE_CHART[m.type];
+              if (!chart) eff = 1;
+              else if (a === b) eff = chart[a] === 0 ? 1 : (chart[a] ?? 1);
+              else eff = (chart[a] === 0 ? 1 : (chart[a] ?? 1)) * (chart[b] === 0 ? 1 : (chart[b] ?? 1));
+            }
+          }
+          return { ...m, eff };
+        });
         const maxEff = Math.max(...pairMoves.map((m) => m.eff));
-        detailData[a][b].push({ monName, sprite, moves: pairMoves, bestEff: maxEff });
+        detailData[a][b].push({ monName, sprite, abilityName, moves: pairMoves, bestEff: maxEff });
         if (maxEff >= 2) {
           counts[a][b]++;
         }
@@ -182,6 +218,7 @@ export default function TeamCoverage({ team, pokedexMap }) {
                   <div className="cv-modal-mon-head">
                     {entry.sprite && <span className="cv-modal-mon-icon" style={entry.sprite.css} />}
                     <span className="cv-modal-mon-name">{entry.monName}</span>
+                    {entry.abilityName && <span className="cv-modal-mon-ability">{entry.abilityName}</span>}
                   </div>
                   <div className="cv-modal-moves">
                     {entry.moves.map((m, j) => (
