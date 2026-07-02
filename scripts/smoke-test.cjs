@@ -173,7 +173,7 @@ async function main() {
   const all = getRegulation('all');
   check('regulation "m-a" exists', !!ma);
   check('regulation "all" exists', !!all);
-  check('DEFAULT_REG is the first bundle key', DEFAULT_REG === 'm-a');
+  check('DEFAULT_REG is the first entry in regulations-config', DEFAULT_REG === 'm-b');
   check('unknown regulation key falls back to default', getRegulation('nope').key === DEFAULT_REG);
   check('m-a pool size is 276', ma.pool && ma.pool.size === 276);
   check('m-a items allowlist size is 117', ma.items && ma.items.size === 117, `got ${ma.items && ma.items.size}`);

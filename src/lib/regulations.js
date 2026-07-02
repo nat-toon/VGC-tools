@@ -74,14 +74,17 @@ function buildRecord(bundle) {
   };
 }
 
-const bundleRecords = Object.values(REG_BUNDLES).map(buildRecord);
+const SANITIZE = (key) => key.replace(/[^a-zA-Z0-9_$]/g, "_");
+const bundleRecords = REG_BUNDLES.REG_ORDER.map(
+  (key) => buildRecord(REG_BUNDLES[SANITIZE(key)])
+);
 
 export const REGULATIONS = {
   ...Object.fromEntries(bundleRecords.map((r) => [r.key, r])),
   [ALL_BUNDLE.KEY]: buildRecord(ALL_BUNDLE),
 };
 
-export const DEFAULT_REG = bundleRecords.length ? bundleRecords[0].key : ALL_BUNDLE.KEY;
+export const DEFAULT_REG = REG_BUNDLES.REG_ORDER[0] || ALL_BUNDLE.KEY;
 
 export function getRegulation(key) {
   return REGULATIONS[key] || REGULATIONS[DEFAULT_REG];
