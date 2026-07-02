@@ -61,12 +61,6 @@ export function applySearchPokemon(pool, search) {
   });
 }
 
-export function applySearchText(items, search, key = "_lcName") {
-  const q = search.trim().toLowerCase();
-  if (!q) return items;
-  return items.filter((i) => i[key]?.includes(q));
-}
-
 export function sortByNameAsc(a, b) {
   return a.name.localeCompare(b.name);
 }

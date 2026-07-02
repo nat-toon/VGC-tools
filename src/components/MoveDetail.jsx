@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import TypeIcon from "./TypeIcon.jsx";
 import CategoryIcon from "./CategoryIcon.jsx";
-import PokedexTable from "./PokedexTable.jsx";
+import PokemonModalList from "./PokemonModalList.jsx";
 import { getPokemonWithMove } from "../lib/learnsets.js";
 import { formatAcc, formatPower } from "../lib/utils.js";
 
@@ -153,7 +153,7 @@ export default function MoveDetail({ move, regulation, allPokemon }) {
         )}
       </div>
 
-      <PokedexTable pokemon={learners} regulation={regulation} allPokemon={allPokemon} />
+      <PokemonModalList pokemon={learners} regulation={regulation} allPokemon={allPokemon} />
     </div>
   );
 }

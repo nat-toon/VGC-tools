@@ -1,24 +1,12 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Modal from "./Modal.jsx";
 import AbilityDetail from "./AbilityDetail.jsx";
 import VirtualTable from "./VirtualTable.jsx";
+import AbilityGridRow from "./rows/AbilityGridRow.jsx";
 import { getAllAbilities, isAbilityLegal } from "../lib/abilities.js";
-import { sortByNameAsc, buildAliasSet, matchesAlias } from "../lib/utils.js";
-import { useRowHeight } from "../lib/hooks.js";
-
-const AbilityGridRow = memo(function AbilityGridRow({ a }) {
-  return (
-    <>
-      <div className="vt-cell vt-sprite"></div>
-      <div className="vt-cell vt-name">{a.name}</div>
-      <div className="vt-cell vt-desc">{a.shortDesc || a.desc || "—"}</div>
-    </>
-  );
-});
+import { useRowHeight, useTableSearchSort } from "../lib/hooks.js";
 
 export default function AbilitiesList({ regulation, search, allPokemon = [] }) {
-  const [sortKey, setSortKey] = useState("");
-  const sortKeyRef = useRef("");
   const [selected, setSelected] = useState(null);
   const rowHeight = useRowHeight();
 
@@ -29,34 +17,12 @@ export default function AbilitiesList({ regulation, search, allPokemon = [] }) {
       .map((a) => ({ ...a, _lcName: a.name.toLowerCase() }));
   }, [regulation]);
 
-  const filtered = useMemo(() => {
-    const { q, aliasSet } = buildAliasSet(search);
-    const searched = items.filter((a) => {
-      if (!q) return true;
-      return matchesAlias(a, q, aliasSet);
-    });
-    if (!sortKey) return searched.sort(sortByNameAsc);
-    const [field, dir] = sortKey.split("-");
-    const desc = dir === "desc" ? -1 : 1;
-    return searched.sort((a, b) => {
-      if (field === "name") return desc * a.name.localeCompare(b.name);
-      return 0;
-    });
-  }, [items, search, sortKey]);
-
-  const cycleSort = useCallback((field) => {
-    setSortKey((cur) => {
-      const next = !cur || !cur.startsWith(field) ? field + "-asc" : cur.split("-")[1] === "asc" ? field + "-desc" : "";
-      sortKeyRef.current = next;
-      return next;
-    });
-  }, []);
-
-  const sortArrow = useCallback((field) => {
-    const sk = sortKeyRef.current;
-    if (!sk?.startsWith(field)) return null;
-    return sk.split("-")[1] === "asc" ? "▲" : "▼";
-  }, []);
+  const {
+    filtered,
+    cycleSort,
+    sortArrow,
+    sortKey,
+  } = useTableSearchSort(items, search, { defaultSort: { key: "name" } });
 
   const getKey = useCallback((a) => a._key, []);
 

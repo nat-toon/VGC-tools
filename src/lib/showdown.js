@@ -1,4 +1,4 @@
-const STAT_KEYS = ["hp", "atk", "def", "spa", "spd", "spe"];
+import { STAT_KEYS } from "./constants.js";
 
 const STAT_LABEL = { hp: "HP", atk: "Atk", def: "Def", spa: "SpA", spd: "SpD", spe: "Spe" };
 

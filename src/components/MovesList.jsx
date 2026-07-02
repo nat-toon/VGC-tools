@@ -1,97 +1,35 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
-import TypeIcon from "./TypeIcon.jsx";
-import CategoryIcon from "./CategoryIcon.jsx";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Modal from "./Modal.jsx";
 import MoveDetail from "./MoveDetail.jsx";
 import VirtualTable from "./VirtualTable.jsx";
 import SectionHeader from "./SectionHeader.jsx";
+import MoveGridRow from "./rows/MoveGridRow.jsx";
+import CategoryGridRow from "./rows/CategoryGridRow.jsx";
+import TypeGridRow from "./rows/TypeGridRow.jsx";
 import { getAllMoves, isMoveLegal } from "../lib/moves.js";
-import { formatAcc, formatPower, buildAliasSet, matchesAlias } from "../lib/utils.js";
-import { TYPES, CATEGORIES, CATEGORY_COLORS } from "../lib/constants.js";
+import { buildAliasSet, matchesAlias } from "../lib/utils.js";
+import { TYPES, CATEGORIES } from "../lib/constants.js";
 import { useRowHeight } from "../lib/hooks.js";
 
-function sortItems(items, sortKey) {
-  if (!sortKey) {
-    return items.slice().sort((a, b) => a.name.localeCompare(b.name));
+function compareMoves(a, b, field) {
+  if (field === "name") return a.name.localeCompare(b.name);
+  if (field === "power") {
+    const va = a.basePower || 0;
+    const vb = b.basePower || 0;
+    return vb - va;
   }
-  const [field, dir] = sortKey.split("-");
-  const desc = dir === "desc" ? -1 : 1;
-  return items.slice().sort((a, b) => {
-    if (field === "name") return desc * a.name.localeCompare(b.name);
-    if (field === "power") {
-      const va = a.basePower || 0;
-      const vb = b.basePower || 0;
-      return desc * (vb - va);
-    }
-    if (field === "pp") {
-      const va = a.pp || 0;
-      const vb = b.pp || 0;
-      return desc * (vb - va);
-    }
-    if (field === "accuracy") {
-      const va = a.accuracy === true ? 101 : a.accuracy || 0;
-      const vb = b.accuracy === true ? 101 : b.accuracy || 0;
-      return desc * (vb - va);
-    }
-    return 0;
-  });
+  if (field === "pp") {
+    const va = a.pp || 0;
+    const vb = b.pp || 0;
+    return vb - va;
+  }
+  if (field === "accuracy") {
+    const va = a.accuracy === true ? 101 : a.accuracy || 0;
+    const vb = b.accuracy === true ? 101 : b.accuracy || 0;
+    return vb - va;
+  }
+  return 0;
 }
-
-const CategoryGridRow = memo(function CategoryGridRow({ cat }) {
-  return (
-    <>
-      <div className="vt-cell vt-spacer"></div>
-      <div className="vt-cell vt-sprite">
-        <CategoryIcon category={cat} width={28} />
-      </div>
-      <div className="vt-cell vt-name">{cat}</div>
-    </>
-  );
-});
-
-const TypeGridRow = memo(function TypeGridRow({ t }) {
-  return (
-    <>
-      <div className="vt-cell vt-spacer"></div>
-      <div className="vt-cell vt-sprite">
-        <TypeIcon type={t} size={28} />
-      </div>
-      <div className="vt-cell vt-name">{t}</div>
-    </>
-  );
-});
-
-const MoveGridRow = memo(function MoveGridRow({ m }) {
-  return (
-    <>
-      <div className="vt-cell vt-spacer"></div>
-      <div className="vt-cell vt-sprite">
-        <TypeIcon type={m.type} size={28} />
-      </div>
-      <div className="vt-cell vt-name move-name">{m.name}</div>
-      <div className="vt-cell vt-cat">
-        {m.category ? (
-          <span className="entry-move-cat" data-category={String(m.category).toLowerCase()}>
-            <CategoryIcon category={m.category} width={20} />
-          </span>
-        ) : null}
-      </div>
-      <div className="vt-cell vt-move-stat" data-no-power={(m.category || "").toLowerCase() === "status" || undefined}>
-        <span className="move-stat-label">BP</span>
-        <span className="move-stat-value">{formatPower(m.basePower)}</span>
-      </div>
-      <div className="vt-cell vt-move-stat">
-        <span className="move-stat-label">PP</span>
-        <span className="move-stat-value">{m.pp ?? "\u2014"}</span>
-      </div>
-      <div className="vt-cell vt-move-stat">
-        <span className="move-stat-label">Acc</span>
-        <span className="move-stat-value">{formatAcc(m.accuracy)}</span>
-      </div>
-      <div className="vt-cell vt-desc">{m.shortDesc || m.desc || "\u2014"}</div>
-    </>
-  );
-});
 
 export default function MovesList({ regulation, search, allPokemon = [], onViewChange, filters, addFilter, removeFilter, setSearch, onMoveSelect, legalMoves }) {
   const [sortKey, setSortKey] = useState("");
@@ -141,7 +79,12 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
         filters.moveTypes.some((t) => (m.type || "").toLowerCase() === t.toLowerCase())
       );
     }
-    return sortItems(result, sortKey);
+    if (!sortKey) {
+      return result.slice().sort((a, b) => a.name.localeCompare(b.name));
+    }
+    const [field, dir] = sortKey.split("-");
+    const desc = dir === "desc" ? -1 : 1;
+    return result.slice().sort((a, b) => desc * compareMoves(a, b, field));
   }, [items, sortKey, filters.categories, filters.moveTypes]);
 
   const toggleFilter = useCallback((category, value) => {
@@ -180,18 +123,10 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
   const sortArrow = useCallback((field) => {
     const sk = sortKeyRef.current;
     if (!sk?.startsWith(field)) return null;
-    return sk.split("-")[1] === "asc" ? "\u25B2" : "\u25BC";
+    return sk.split("-")[1] === "asc" ? "▲" : "▼";
   }, []);
 
   const getKey = useCallback((m) => m._key, []);
-
-  const handleTableSelect = useCallback((m) => {
-    if (onMoveSelect) {
-      onMoveSelect(m._key);
-    } else {
-      setSelected((cur) => (cur && cur._key === m._key ? null : m));
-    }
-  }, [onMoveSelect]);
 
   const renderItem = useCallback((m) => <MoveGridRow m={m} />, []);
 
@@ -317,7 +252,7 @@ export default function MovesList({ regulation, search, allPokemon = [], onViewC
         renderItem={renderItem}
         selectedKey={selected?._key}
         getKey={getKey}
-        onSelect={handleTableSelect}
+        onSelect={handleMoveClick}
         emptyText="No moves match the current filters."
       />
 

@@ -1,6 +1,5 @@
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TypeIcon from "./TypeIcon.jsx";
-import CategoryIcon from "./CategoryIcon.jsx";
 import MovesList from "./MovesList.jsx";
 import SearchInput from "./SearchInput.jsx";
 import VirtualTable from "./VirtualTable.jsx";
@@ -8,15 +7,17 @@ import Pokedex from "./Pokedex.jsx";
 import GlobalSearch from "./GlobalSearch.jsx";
 import Icon from "./Icon.jsx";
 import Sprite from "./Sprite.jsx";
+import ItemGridRow from "./rows/ItemGridRow.jsx";
+import FilterChipsBar from "./FilterChipsBar.jsx";
 import { getLargeSprite, getIcon, getItemIcon } from "../lib/sprite.js";
 import { getMove } from "../lib/moves.js";
 import { getAllItems, isItemLegal } from "../lib/items.js";
 import { getLearnset } from "../lib/learnsets.js";
-import { STAT_CONFIG, NATURES, NATURE_MAP, CATEGORY_COLORS } from "../lib/constants.js";
+import { STAT_CONFIG, NATURES, NATURE_MAP } from "../lib/constants.js";
 import { calcFinalStatsSP, statRangeSP, SP_MAX_TOTAL, SP_MAX_PER_STAT, DEFAULT_LEVEL } from "../lib/stats.js";
 import { getAbilityByName } from "../lib/abilities.js";
 import { buildAliasSet, matchesAlias } from "../lib/utils.js";
-import { useRowHeight } from "../lib/hooks.js";
+import { useRowHeight, useMobileMedia } from "../lib/hooks.js";
 
 const SpriteView = memo(function SpriteView({ mon, failed, onFailed }) {
   const sprite = useMemo(() => (mon ? getLargeSprite(mon) : null), [mon]);
@@ -203,18 +204,6 @@ function StatsPanel({ mon, slot, slotIndex, onUpdate }) {
   );
 }
 
-const ItemGridRow = memo(function ItemGridRow({ i }) {
-  const icon = getItemIcon(i.spritenum);
-  return (
-    <>
-      <div className="vt-cell vt-spacer"></div>
-      <div className="vt-cell vt-sprite">{icon ? <Icon className="item-row-icon" icon={icon} /> : null}</div>
-      <div className="vt-cell vt-name">{i.name}</div>
-      <div className="vt-cell vt-desc">{i.shortDesc || i.desc || "\u2014"}</div>
-    </>
-  );
-});
-
 function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, regulation, onUpdate }) {
   const [selectedPart, setSelectedPart] = useState(null);
   const [selectedMoveIdx, setSelectedMoveIdx] = useState(null);
@@ -225,6 +214,7 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
   const [pokemonSearch, setPokemonSearch] = useState("");
   const [pokemonFilterEntries, setPokemonFilterEntries] = useState([]);
   const rowHeight = useRowHeight();
+  const isMobile = useMobileMedia();
   const mon = slot.name ? pokedexMap[slot.name.toLowerCase()] : null;
   const [failed, setFailed] = useState(false);
   const natureObj = slot.nature ? NATURE_MAP[slot.nature] : null;
@@ -272,17 +262,6 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
       vp.removeEventListener("resize", onResize);
       target.scrollIntoView({ block: "start" });
     }, 600);
-  }, []);
-
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false,
-  );
-
-  useEffect(() => {
-    const mql = window.matchMedia("(max-width: 768px)");
-    const handler = (e) => setIsMobile(e.matches);
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
   }, []);
 
   useEffect(() => {
@@ -569,56 +548,11 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
         <div className="se-moves-search-row">
           <SearchInput ref={pokemonSearchRef} className="input" value={pokemonSearch} onChange={setPokemonSearch} />
         </div>
-        {pokemonFilterEntries.length > 0 && (
-          <div className="filter-bar">
-            {pokemonFilterEntries.map(({ category, value }) => {
-              if (category === "types") {
-                return (
-                  <span
-                    key={`type-${value}`}
-                    className="filter-chip filter-chip-type"
-                    onClick={() => removePokemonFilter("types", value)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <TypeIcon type={value} size={16} />
-                  </span>
-                );
-              }
-              if (category === "moves") {
-                const moveData = getMove(value);
-                return (
-                  <span
-                    key={`move-${value}`}
-                    className="filter-chip filter-chip-move"
-                    onClick={() => removePokemonFilter("moves", value)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <span className="filter-chip-label">{moveData?.name || value}</span>
-                  </span>
-                );
-              }
-              if (category === "abilities") {
-                return (
-                  <span
-                    key={`ability-${value}`}
-                    className="filter-chip filter-chip-ability"
-                    onClick={() => removePokemonFilter("abilities", value)}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <span className="filter-chip-label">{value}</span>
-                  </span>
-                );
-              }
-              return null;
-            })}
-            <button className="filter-clear-all" onClick={clearPokemonFilters}>
-              Clear all
-            </button>
-          </div>
-        )}
+        <FilterChipsBar
+          entries={pokemonFilterEntries}
+          onRemove={removePokemonFilter}
+          onClear={clearPokemonFilters}
+        />
         <Suspense fallback={<div className="loading-text">Loading…</div>}>
           {pokemonSearch.trim() ? (
             <GlobalSearch
@@ -747,46 +681,14 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
         <div className="se-moves-search-row">
           <SearchInput ref={moveSearchRef} className="input" value={moveSearch} onChange={setMoveSearch} />
         </div>
-        {(moveFilters.categories.length > 0 || moveFilters.moveTypes.length > 0) && (
-          <div className="filter-bar">
-            {moveFilters.categories.map((c) => (
-              <span
-                key={`cat-${c}`}
-                className="filter-chip filter-chip-category"
-                onClick={() => removeMoveFilter("categories", c)}
-                role="button"
-                tabIndex={0}
-              >
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: "3px",
-                    background: CATEGORY_COLORS[c.toLowerCase()] || "transparent",
-                    padding: "1px 3px",
-                  }}
-                >
-                  <CategoryIcon category={c} width={16} />
-                </span>
-              </span>
-            ))}
-            {moveFilters.moveTypes.map((t) => (
-              <span
-                key={`type-${t}`}
-                className="filter-chip filter-chip-type"
-                onClick={() => removeMoveFilter("moveTypes", t)}
-                role="button"
-                tabIndex={0}
-              >
-                <TypeIcon type={t} size={16} />
-              </span>
-            ))}
-            <button className="filter-clear-all" onClick={clearMoveFilters}>
-              Clear all
-            </button>
-          </div>
-        )}
+        <FilterChipsBar
+          entries={[
+            ...moveFilters.categories.map((c) => ({ category: "categories", value: c })),
+            ...moveFilters.moveTypes.map((t) => ({ category: "moveTypes", value: t })),
+          ]}
+          onRemove={removeMoveFilter}
+          onClear={clearMoveFilters}
+        />
         <div className="se-moves-list">
           <MovesList
             regulation={regulation}

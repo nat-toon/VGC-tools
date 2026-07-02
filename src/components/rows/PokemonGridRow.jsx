@@ -1,11 +1,9 @@
-import { memo, useCallback, useMemo, useState } from "react";
-import TypeIcon from "./TypeIcon.jsx";
-import Icon from "./Icon.jsx";
-import Modal from "./Modal.jsx";
-import PokemonEntry from "./PokemonEntry.jsx";
-import { STAT_CONFIG } from "../lib/constants.js";
-import { bst, displayName } from "../lib/utils.js";
-import NameWithExt from "./NameWithExt.jsx";
+import { memo } from "react";
+import TypeIcon from "../TypeIcon.jsx";
+import Icon from "../Icon.jsx";
+import { STAT_CONFIG } from "../../lib/constants.js";
+import { bst, displayName } from "../../lib/utils.js";
+import NameWithExt from "../NameWithExt.jsx";
 
 const PokemonGridRow = memo(function PokemonGridRow({ p }) {
   const abilities = p.abilities || [];
@@ -58,49 +56,4 @@ const PokemonGridRow = memo(function PokemonGridRow({ p }) {
   );
 });
 
-export default function PokedexTable({
-  pokemon,
-  regulation,
-  allPokemon = [],
-  showEmpty = true,
-}) {
-  const [entrySelected, setEntrySelected] = useState(null);
-
-  function handleRowClick(p) {
-    setEntrySelected((cur) => (cur && cur.key === p.key ? null : p));
-  }
-
-  if (pokemon.length === 0) {
-    if (showEmpty) return <div className="empty-state">No Pokemon match.</div>;
-    return null;
-  }
-
-  const getKey = (p) => p.key;
-
-  return (
-    <>
-      <div className="modal-table-wrap">
-        {pokemon.map((p) => (
-          <div
-            key={p.key}
-            className={`vt-row pkmn-grid modal-table-row${entrySelected?.key === p.key ? " selected" : ""}`}
-            onClick={() => handleRowClick(p)}
-            tabIndex={0}
-            role="button"
-          >
-            <PokemonGridRow p={p} />
-          </div>
-        ))}
-      </div>
-      <Modal
-        open={!!entrySelected}
-        onClose={() => setEntrySelected(null)}
-        labelledBy="entry-name"
-      >
-        {entrySelected && (
-          <PokemonEntry pokemon={entrySelected} regulation={regulation} allPokemon={allPokemon} />
-        )}
-      </Modal>
-    </>
-  );
-}
+export default PokemonGridRow;

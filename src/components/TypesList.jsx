@@ -1,8 +1,9 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import TypeIcon from "./TypeIcon.jsx";
 import Modal from "./Modal.jsx";
-import PokedexTable from "./PokedexTable.jsx";
+import PokemonModalList from "./PokemonModalList.jsx";
 import VirtualTable from "./VirtualTable.jsx";
+import TypeGridRow from "./rows/TypeGridRow.jsx";
 import { getPool } from "../lib/regulations.js";
 import { applySearchPokemon, sortByNumAsc } from "../lib/utils.js";
 import { TYPES } from "../lib/constants.js";
@@ -10,18 +11,6 @@ import { useRowHeight } from "../lib/hooks.js";
 
 const TYPES_ROW_HEIGHT_DESKTOP = 44;
 const TYPES_ROW_HEIGHT_MOBILE = 28;
-
-const TypeGridRow = memo(function TypeGridRow({ t }) {
-  return (
-    <>
-      <div className="vt-cell vt-spacer"></div>
-      <div className="vt-cell vt-sprite">
-        <TypeIcon type={t} size={28} />
-      </div>
-      <div className="vt-cell vt-name">{t}</div>
-    </>
-  );
-});
 
 export default function TypesList({ allPokemon, regulation, search }) {
   const [selected, setSelected] = useState(null);
@@ -76,7 +65,7 @@ export default function TypesList({ allPokemon, regulation, search }) {
               <TypeIcon type={selected} size={48} />
               <h2 id="type-detail" className="type-detail-name">{selected}</h2>
             </div>
-            <PokedexTable
+            <PokemonModalList
               pokemon={members.filter((p) => (p.types || []).includes(selected))}
               regulation={regulation}
               allPokemon={allPokemon}

@@ -2,16 +2,16 @@ import { useMemo, useState, useCallback } from "react";
 import Sprite from "./Sprite.jsx";
 import Icon from "./Icon.jsx";
 import TypeIcon from "./TypeIcon.jsx";
-import CategoryIcon from "./CategoryIcon.jsx";
 import Modal from "./Modal.jsx";
 import AbilityDetail from "./AbilityDetail.jsx";
 import MoveDetail from "./MoveDetail.jsx";
+import MoveGridRow from "./rows/MoveGridRow.jsx";
 import { getLargeSprite, getIcon } from "../lib/sprite.js";
 import { getAbilityByName } from "../lib/abilities.js";
 import { getMovesWithDetails } from "../lib/learnsets.js";
 import { STAT_CONFIG } from "../lib/constants.js";
 import { statTier, statRangeAtLevel, DEFAULT_LEVEL, MIN_LEVEL, MAX_LEVEL } from "../lib/stats.js";
-import { formatAcc, formatPower, bst } from "../lib/utils.js";
+import { bst } from "../lib/utils.js";
 import NameWithExt from "./NameWithExt.jsx";
 
 export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
@@ -194,32 +194,7 @@ export default function PokemonEntry({ pokemon, regulation, allPokemon = [] }) {
                   tabIndex={0}
                   role="button"
                 >
-                  <div className="vt-cell vt-spacer"></div>
-                  <div className="vt-cell vt-sprite">{m.type ? <TypeIcon type={m.type} size={28} /> : null}</div>
-                  <div className="vt-cell vt-name move-name">{m.name}</div>
-                  <div className="vt-cell vt-cat">
-                    {m.category ? (
-                      <span className="entry-move-cat" data-category={String(m.category).toLowerCase()}>
-                        <CategoryIcon category={m.category} width={20} />
-                      </span>
-                    ) : null}
-                  </div>
-                  <div
-                    className="vt-cell vt-move-stat"
-                    data-no-power={(m.category && String(m.category).toLowerCase() === "status") || undefined}
-                  >
-                    <span className="move-stat-label">BP</span>
-                    <span className="move-stat-value">{formatPower(m.basePower)}</span>
-                  </div>
-                  <div className="vt-cell vt-move-stat">
-                    <span className="move-stat-label">PP</span>
-                    <span className="move-stat-value">{m.pp ?? "\u2014"}</span>
-                  </div>
-                  <div className="vt-cell vt-move-stat">
-                    <span className="move-stat-label">Acc</span>
-                    <span className="move-stat-value">{formatAcc(m.accuracy)}</span>
-                  </div>
-                  <div className="vt-cell vt-desc">{m.shortDesc || m.desc || "\u2014"}</div>
+                  <MoveGridRow m={m} />
                 </div>
               ))}
             </div>

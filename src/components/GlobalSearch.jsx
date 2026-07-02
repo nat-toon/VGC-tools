@@ -1,125 +1,19 @@
-import { memo, useCallback, useMemo, useState } from "react";
-import TypeIcon from "./TypeIcon.jsx";
-import CategoryIcon from "./CategoryIcon.jsx";
-import Icon from "./Icon.jsx";
+import { useCallback, useMemo, useState } from "react";
 import Modal from "./Modal.jsx";
 import PokemonEntry from "./PokemonEntry.jsx";
 import VirtualTable from "./VirtualTable.jsx";
 import SectionHeader from "./SectionHeader.jsx";
+import PokemonGridRow from "./rows/PokemonGridRow.jsx";
+import TypeGridRow from "./rows/TypeGridRow.jsx";
+import MoveGridRow from "./rows/MoveGridRow.jsx";
+import AbilityGridRow from "./rows/AbilityGridRow.jsx";
 import { getPool } from "../lib/regulations.js";
 import { getAllMoves, isMoveLegal } from "../lib/moves.js";
 import { getAllAbilities, isAbilityLegal } from "../lib/abilities.js";
 import { getLearnset, areLearnsetsLoaded } from "../lib/learnsets.js";
-import { displayName, formatPower, formatAcc, buildAliasSet, matchesAlias } from "../lib/utils.js";
-import NameWithExt from "./NameWithExt.jsx";
-import { STAT_CONFIG, TYPES } from "../lib/constants.js";
-import { bst } from "../lib/utils.js";
+import { buildAliasSet, matchesAlias } from "../lib/utils.js";
+import { TYPES } from "../lib/constants.js";
 import { useRowHeight } from "../lib/hooks.js";
-
-const PokemonGridRow = memo(function PokemonGridRow({ p }) {
-  const abilities = p.abilities || [];
-  const visibleAbilities = [];
-  const hiddenAbilities = [];
-  for (const a of abilities) {
-    if (a.hidden) hiddenAbilities.push(a);
-    else visibleAbilities.push(a);
-  }
-  const total = bst(p.baseStats);
-  return (
-    <>
-      <div className="vt-cell vt-num">#{String(p.num).padStart(4, "0")}</div>
-      <div className="vt-cell vt-sprite">
-        <Icon className="row-icon" icon={p.icon} />
-      </div>
-      <div className="vt-cell vt-name"><NameWithExt name={p.name} /></div>
-      <div className="vt-cell vt-types">
-        {(p.types || []).map((t) => (
-          <TypeIcon key={t} type={t} size={22} />
-        ))}
-      </div>
-      <div className="vt-cell vt-ab">
-        {visibleAbilities.length === 0
-          ? <span className="muted">—</span>
-          : visibleAbilities.map((a) => (
-              <span key={a.name} className="ab">{displayName(a.name)}</span>
-            ))}
-      </div>
-      <div className="vt-cell vt-ab">
-        {hiddenAbilities.length > 0 && hiddenAbilities.map((a) => (
-              <span key={a.name} className="ab hidden">{displayName(a.name)}</span>
-            ))}
-      </div>
-      {STAT_CONFIG.map(({ key, label }) => (
-        <div key={key} className="vt-cell vt-stat">
-          <div className="stat-cell-stack">
-            <span className="stat-cell-label">{label}</span>
-            <span className="stat-cell-value">{p.baseStats ? p.baseStats[key] : "?"}</span>
-          </div>
-        </div>
-      ))}
-      <div className="vt-cell vt-stat">
-        <div className="stat-cell-stack">
-          <span className="stat-cell-label">BST</span>
-          <span className="stat-cell-value">{total ?? "?"}</span>
-        </div>
-      </div>
-    </>
-  );
-});
-
-const TypeGridRow = memo(function TypeGridRow({ t }) {
-  return (
-    <>
-      <div className="vt-cell vt-spacer"></div>
-      <div className="vt-cell vt-sprite">
-        <TypeIcon type={t} size={28} />
-      </div>
-      <div className="vt-cell vt-name">{t}</div>
-    </>
-  );
-});
-
-const MoveGridRow = memo(function MoveGridRow({ m }) {
-  return (
-    <>
-      <div className="vt-cell vt-spacer"></div>
-      <div className="vt-cell vt-sprite">
-        <TypeIcon type={m.type} size={28} />
-      </div>
-      <div className="vt-cell vt-name move-name">{m.name}</div>
-      <div className="vt-cell vt-cat">
-        {m.category ? (
-          <span className="entry-move-cat" data-category={String(m.category).toLowerCase()}>
-            <CategoryIcon category={m.category} width={20} />
-          </span>
-        ) : null}
-      </div>
-      <div className="vt-cell vt-move-stat" data-no-power={(m.category || "").toLowerCase() === "status" || undefined}>
-        <span className="move-stat-label">BP</span>
-        <span className="move-stat-value">{formatPower(m.basePower)}</span>
-      </div>
-      <div className="vt-cell vt-move-stat">
-        <span className="move-stat-label">PP</span>
-        <span className="move-stat-value">{m.pp ?? "\u2014"}</span>
-      </div>
-      <div className="vt-cell vt-move-stat">
-        <span className="move-stat-label">Acc</span>
-        <span className="move-stat-value">{formatAcc(m.accuracy)}</span>
-      </div>
-      <div className="vt-cell vt-desc">{m.shortDesc || m.desc || "\u2014"}</div>
-    </>
-  );
-});
-
-const AbilityGridRow = memo(function AbilityGridRow({ a }) {
-  return (
-    <>
-      <div className="vt-cell vt-sprite"></div>
-      <div className="vt-cell vt-name">{a.name}</div>
-      <div className="vt-cell vt-desc">{a.shortDesc || a.desc || "\u2014"}</div>
-    </>
-  );
-});
 
 export default function GlobalSearch({ allPokemon, regulation, search, filters, addFilter, removeFilter, setSearch, onPokemonSelect, learnsetsLoaded = true }) {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
@@ -211,17 +105,9 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
     toggleFilter("moves", m._key);
   }, [toggleFilter]);
 
-  const handleMoveClick = useCallback((m) => {
-    handleMoveFilter(m);
-  }, [handleMoveFilter]);
-
   const handleAbilityFilter = useCallback((a) => {
     toggleFilter("abilities", a.name);
   }, [toggleFilter]);
-
-  const handleAbilityClick = useCallback((a) => {
-    handleAbilityFilter(a);
-  }, [handleAbilityFilter]);
 
   const getPokemonKey = useCallback((p) => p.key, []);
   const renderPokemonRow = useCallback((p) => <PokemonGridRow p={p} />, []);
@@ -241,7 +127,10 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
     { label: "Name" },
     { nosort: true, label: "Type", className: "text-left" },
     { nosort: true, label: "Abilities", style: { gridColumn: "span 2" } },
-    ...STAT_CONFIG.map(({ key, label }) => ({ nosort: true, label })),
+    ...["hp", "atk", "def", "spa", "spd", "spe"].map((key) => {
+      const label = { hp: "HP", atk: "ATK", def: "DEF", spa: "SPA", spd: "SPD", spe: "SPE" }[key];
+      return { nosort: true, label };
+    }),
     { nosort: true, label: "BST" },
   ], []);
 
@@ -320,7 +209,7 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
               renderItem={renderMoveRow}
               selectedKey={null}
               getKey={getMoveKey}
-              onSelect={handleMoveClick}
+              onSelect={handleMoveFilter}
               emptyText=""
             />
           </div>
@@ -339,7 +228,7 @@ export default function GlobalSearch({ allPokemon, regulation, search, filters, 
               renderItem={renderAbilityRow}
               selectedKey={null}
               getKey={getAbilityKey}
-              onSelect={handleAbilityClick}
+              onSelect={handleAbilityFilter}
               emptyText=""
             />
           </div>

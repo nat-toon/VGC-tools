@@ -1,13 +1,13 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Icon from "./Icon.jsx";
 import Modal from "./Modal.jsx";
-import PokedexTable from "./PokedexTable.jsx";
+import PokemonModalList from "./PokemonModalList.jsx";
 import VirtualTable from "./VirtualTable.jsx";
+import ItemGridRow from "./rows/ItemGridRow.jsx";
 import { getAllItems, isItemLegal } from "../lib/items.js";
 import { getItemIcon } from "../lib/sprite.js";
 import { getPool } from "../lib/regulations.js";
-import { sortByNameAsc, buildAliasSet, matchesAlias } from "../lib/utils.js";
-import { useRowHeight } from "../lib/hooks.js";
+import { useRowHeight, useTableSearchSort } from "../lib/hooks.js";
 
 function extractItemPokemonName(item) {
   const desc = item.desc || item.shortDesc || "";
@@ -17,10 +17,6 @@ function extractItemPokemonName(item) {
   m = desc.match(/^([A-Z][a-z]+(?:-[A-Z][a-z]+)?):/);
   if (m) return m[1];
   return null;
-}
-
-function isPokemonSpecificItem(item) {
-  return extractItemPokemonName(item) != null;
 }
 
 function findItemBearers(nameText, regPool) {
@@ -51,8 +47,8 @@ function ItemDetail({ item, regulation, allPokemon }) {
         <h2 className="item-detail-name">{item.name}</h2>
       </div>
       <p className="item-detail-desc">{item.desc || item.shortDesc || "No description available."}</p>
-      {isPokemonSpecificItem(item) && (
-        <PokedexTable
+      {nameText && (
+        <PokemonModalList
           pokemon={bearers}
           regulation={regulation}
           allPokemon={allPokemon}
@@ -62,23 +58,7 @@ function ItemDetail({ item, regulation, allPokemon }) {
   );
 }
 
-const ItemGridRow = memo(function ItemGridRow({ i }) {
-  const icon = getItemIcon(i.spritenum);
-  return (
-    <>
-      <div className="vt-cell vt-spacer"></div>
-      <div className="vt-cell vt-sprite">
-        {icon ? <Icon className="item-row-icon" icon={icon} /> : null}
-      </div>
-      <div className="vt-cell vt-name">{i.name}</div>
-      <div className="vt-cell vt-desc">{i.shortDesc || i.desc || "—"}</div>
-    </>
-  );
-});
-
 export default function ItemsList({ regulation, search, allPokemon = [] }) {
-  const [sortKey, setSortKey] = useState("");
-  const sortKeyRef = useRef("");
   const [selected, setSelected] = useState(null);
   const rowHeight = useRowHeight();
 
@@ -89,34 +69,7 @@ export default function ItemsList({ regulation, search, allPokemon = [] }) {
       .map((i) => ({ ...i, _lcName: i.name.toLowerCase() }));
   }, [regulation]);
 
-  const filtered = useMemo(() => {
-    const { q, aliasSet } = buildAliasSet(search);
-    const searched = items.filter((i) => {
-      if (!q) return true;
-      return matchesAlias(i, q, aliasSet);
-    });
-    if (!sortKey) return searched.sort(sortByNameAsc);
-    const [field, dir] = sortKey.split("-");
-    const desc = dir === "desc" ? -1 : 1;
-    return searched.sort((a, b) => {
-      if (field === "name") return desc * a.name.localeCompare(b.name);
-      return 0;
-    });
-  }, [items, search, sortKey]);
-
-  const cycleSort = useCallback((field) => {
-    setSortKey((cur) => {
-      const next = !cur || !cur.startsWith(field) ? field + "-asc" : cur.split("-")[1] === "asc" ? field + "-desc" : "";
-      sortKeyRef.current = next;
-      return next;
-    });
-  }, []);
-
-  const sortArrow = useCallback((field) => {
-    const sk = sortKeyRef.current;
-    if (!sk?.startsWith(field)) return null;
-    return sk.split("-")[1] === "asc" ? "▲" : "▼";
-  }, []);
+  const { filtered, cycleSort, sortArrow, sortKey } = useTableSearchSort(items, search);
 
   const getKey = useCallback((i) => i._key, []);
 

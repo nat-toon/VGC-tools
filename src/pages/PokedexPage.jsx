@@ -1,9 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import SearchInput from "../components/SearchInput.jsx";
 import ViewSelector from "../components/ViewSelector.jsx";
-import TypeIcon from "../components/TypeIcon.jsx";
-import CategoryIcon from "../components/CategoryIcon.jsx";
-import { getMove } from "../lib/moves.js";
+import FilterChipsBar from "../components/FilterChipsBar.jsx";
 
 const Pokedex = lazy(() => import("../components/Pokedex.jsx"));
 const TypesList = lazy(() => import("../components/TypesList.jsx"));
@@ -11,11 +9,12 @@ const MovesList = lazy(() => import("../components/MovesList.jsx"));
 const ItemsList = lazy(() => import("../components/ItemsList.jsx"));
 const AbilitiesList = lazy(() => import("../components/AbilitiesList.jsx"));
 const GlobalSearch = lazy(() => import("../components/GlobalSearch.jsx"));
+
 import { loadPokedex } from "../lib/pokedex.js";
 import { loadMoves } from "../lib/moves.js";
 import { loadLearnsets, areLearnsetsLoaded } from "../lib/learnsets.js";
 import { REGULATIONS, DEFAULT_REG } from "../lib/regulations.js";
-import { REG_KEY, CATEGORY_COLORS } from "../lib/constants.js";
+import { REG_KEY } from "../lib/constants.js";
 
 export default function PokedexPage() {
   const searchInputRef = useRef(null);
@@ -142,52 +141,11 @@ export default function PokedexPage() {
         </div>
       </div>
 
-      {hasActiveFilters && (
-        <div className="filter-bar">
-          {filterEntries.map(({ category, value }) => {
-            if (category === "types") {
-              return (
-                <span key={`type-${value}`} className="filter-chip filter-chip-type" onClick={() => removeFilter("types", value)} role="button" tabIndex={0}>
-                  <TypeIcon type={value} size={16} />
-                </span>
-              );
-            }
-            if (category === "moves") {
-              const moveData = getMove(value);
-              return (
-                <span key={`move-${value}`} className="filter-chip filter-chip-move" onClick={() => removeFilter("moves", value)} role="button" tabIndex={0}>
-                  <span className="filter-chip-label">{moveData?.name || value}</span>
-                </span>
-              );
-            }
-            if (category === "abilities") {
-              return (
-                <span key={`ability-${value}`} className="filter-chip filter-chip-ability" onClick={() => removeFilter("abilities", value)} role="button" tabIndex={0}>
-                  <span className="filter-chip-label">{value}</span>
-                </span>
-              );
-            }
-            if (category === "categories") {
-              return (
-                <span key={`category-${value}`} className="filter-chip filter-chip-category" onClick={() => removeFilter("categories", value)} role="button" tabIndex={0}>
-                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "3px", background: CATEGORY_COLORS[value.toLowerCase()] || "transparent", padding: "1px 3px" }}>
-                    <CategoryIcon category={value} width={16} />
-                  </span>
-                </span>
-              );
-            }
-            if (category === "moveTypes") {
-              return (
-                <span key={`movetype-${value}`} className="filter-chip filter-chip-type" onClick={() => removeFilter("moveTypes", value)} role="button" tabIndex={0}>
-                  <TypeIcon type={value} size={16} />
-                </span>
-              );
-            }
-            return null;
-          })}
-          <button className="filter-clear-all" onClick={clearFilters}>Clear all</button>
-        </div>
-      )}
+      <FilterChipsBar
+        entries={filterEntries}
+        onRemove={removeFilter}
+        onClear={clearFilters}
+      />
 
       {!isSearching && !hasActiveFilters && <ViewSelector value={view} onChange={setView} />}
 
