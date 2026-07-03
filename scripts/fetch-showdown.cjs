@@ -54,6 +54,7 @@ const USER_AGENT = process.env.SHOWDOWN_USER_AGENT || 'pokemon-tools-build';
 const CDN_BASE = 'https://play.pokemonshowdown.com/data/';
 const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/smogon/pokemon-showdown/master/';
 const CLIENT_GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/smogon/pokemon-showdown-client/master/';
+const DAMAGE_CALC_RAW_BASE = 'https://raw.githubusercontent.com/smogon/damage-calc/master/calc/src/';
 
 const COMPILED_FILES = ['pokedex', 'moves', 'learnsets'];
 
@@ -72,6 +73,38 @@ const MASTER_TS_FILES = [
 // correct cell of pokemonicons-sheet.png.
 const CLIENT_TS_FILES = [
   { rel: 'play.pokemonshowdown.com/src/battle-dex-data.ts' },
+];
+
+// Damage calculator source files from smogon/damage-calc.
+// These are the core TypeScript files that implement the damage calculation engine.
+const DAMAGE_CALC_FILES = [
+  'util.ts',
+  'stats.ts',
+  'data/interface.ts',
+  'data/natures.ts',
+  'data/types.ts',
+  'data/abilities.ts',
+  'data/items.ts',
+  'data/moves.ts',
+  'data/species.ts',
+  'data/index.ts',
+  'state.ts',
+  'pokemon.ts',
+  'move.ts',
+  'field.ts',
+  'result.ts',
+  'desc.ts',
+  'items.ts',
+  'mechanics/util.ts',
+  'mechanics/gen789.ts',
+  'mechanics/gen56.ts',
+  'mechanics/gen4.ts',
+  'mechanics/gen3.ts',
+  'mechanics/gen12.ts',
+  'mechanics/champions.ts',
+  'calc.ts',
+  'adaptable.ts',
+  'index.ts',
 ];
 
 function ensureDir(p) {
@@ -224,6 +257,11 @@ async function fetchOneClient(rel) {
   await fetchTo(out, CLIENT_GITHUB_RAW_BASE + rel);
 }
 
+async function fetchOneDamageCalc(rel) {
+  const out = path.join(UPSTREAM_DIR, 'damage-calc', 'calc', 'src', rel);
+  await fetchTo(out, DAMAGE_CALC_RAW_BASE + rel);
+}
+
 function summarisePerModCoverage(modDirs) {
   /*
    * After the fetch loop, inspect which per-mod files actually
@@ -286,6 +324,11 @@ async function main() {
   console.log('\nClient TypeScript source (from GitHub)');
   for (const { rel } of CLIENT_TS_FILES) {
     await fetchOneClient(rel);
+  }
+
+  console.log('\nDamage calculator source (from GitHub)');
+  for (const rel of DAMAGE_CALC_FILES) {
+    await fetchOneDamageCalc(rel);
   }
 
   if (modDirs.length === 0) {

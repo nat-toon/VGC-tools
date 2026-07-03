@@ -27,6 +27,7 @@ const steps = [
   ['parse-sprite-data.cjs', 'src/data/sprite-overrides.js + scripts/.cache/sprite-overrides.json'],
   ['build-regulations.cjs', 'src/data/regulations/*.js + public/regulations/*/learnsets.json'],
   ['slim-showdown.cjs', 'public/pokedex.json + moves.json + learnsets.json'],
+  ['build-damage-calc.cjs', 'src/data/damage-calc.js'],
 ];
 
 function run(script, what) {
