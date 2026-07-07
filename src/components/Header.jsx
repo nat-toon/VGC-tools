@@ -9,8 +9,8 @@ export default function Header() {
       <h1>VGC tools</h1>
       <nav className="desktop-nav">
         <NavLink to="/pokedex">Pokedex</NavLink>
-        <NavLink to="/calculator">Calculator</NavLink>
         <NavLink to="/teambuilder">Team Builder</NavLink>
+        <NavLink to="/calculator">Calculator</NavLink>
       </nav>
       <button
         className="hamburger"
@@ -32,11 +32,11 @@ export default function Header() {
           <NavLink to="/pokedex" onClick={() => setMenuOpen(false)}>
             Pokedex
           </NavLink>
-          <NavLink to="/calculator" onClick={() => setMenuOpen(false)}>
-            Calculator
-          </NavLink>
           <NavLink to="/teambuilder" onClick={() => setMenuOpen(false)}>
             Team Builder
+          </NavLink>
+          <NavLink to="/calculator" onClick={() => setMenuOpen(false)}>
+            Calculator
           </NavLink>
         </nav>
       )}

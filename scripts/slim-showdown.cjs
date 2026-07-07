@@ -24,6 +24,10 @@ const OUT = path.join(ROOT, 'public');
 const MOVE_FIELDS = new Set([
   'num', 'name', 'type', 'basePower', 'category', 'pp', 'accuracy',
   'priority', 'target', 'flags', 'desc', 'shortDesc', 'isNonstandard',
+  'recoil', 'drain', 'hasCrashDamage', 'mindBlownRecoil', 'struggleRecoil',
+  'self', 'ignoreDefensive', 'overrideOffensiveStat', 'overrideDefensiveStat',
+  'overrideOffensivePokemon', 'overrideDefensivePokemon', 'breaksProtect',
+  'isZ', 'isMax', 'multihit', 'multiaccuracy', 'willCrit',
 ]);
 const LEARNSET_CODES = /^(\d+)([LMTEVS])(\d*)$/;
 
