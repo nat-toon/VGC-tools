@@ -686,7 +686,7 @@ function convertToNcpPokemon(pokemon, speciesData, gen) {
 
   const calcStat = (statName, base, sp) => {
     const spVal = sp || 0;
-    let stat = Math.floor(((2 * base + 31) * level) / 100 + 5 + spVal);
+    let stat = Math.floor(Math.floor(((2 * base + 31) * level) / 100) + 5 + spVal);
     if (statName === "hp") stat += level + 5;
     if (plusStat === statName) stat = Math.floor(stat * 1.1);
     else if (minusStat === statName) stat = Math.floor(stat * 0.9);
@@ -713,6 +713,14 @@ function convertToNcpPokemon(pokemon, speciesData, gen) {
     }
   }
 
+  // Compute stats with boosts applied (NCP engine reads stats for damage formula)
+  const stats = rawStats.map((base, i) => {
+    const mod = boosts[i];
+    if (mod > 0) return Math.floor(base * (2 + mod) / 2);
+    if (mod < 0) return Math.floor(base * 2 / (2 - mod));
+    return base;
+  });
+
   // Resolve item name
   const itemName = pokemon.item || "";
 
@@ -728,7 +736,7 @@ function convertToNcpPokemon(pokemon, speciesData, gen) {
     level: level,
     nature: nature,
     rawStats: rawStats,
-    stats: [...rawStats],
+    stats: stats,
     boosts: boosts,
     sps: [sp.atk || 0, sp.def || 0, sp.spa || 0, sp.spd || 0, sp.spe || 0],
     evs: [0, 0, 0, 0, 0],
@@ -737,7 +745,7 @@ function convertToNcpPokemon(pokemon, speciesData, gen) {
     HPIVs: 31,
     HPSPs: sp.hp || 0,
     HPraw: hp,
-    curHP: pokemon.curHP || hp,
+    curHP: pokemon.curHP ?? hp,
     maxHP: hp,
     moves: [], // Will be filled in with actual moves
     tera_type: pokemon.teraType || "Normal",
@@ -844,23 +852,23 @@ function convertToNcpField(fieldOptions) {
     isSeaFire: false,
     isGMaxField: false,
     isSaltCure: false,
-    isSR: attackerSide.stealthRock || false,
-    spikes: attackerSide.spikes || 0,
-    isSteelsurge: attackerSide.steelSurge || false,
+    isSR: defenderSide.isSR || false,
+    spikes: defenderSide.spikes || 0,
+    isSteelsurge: defenderSide.isSteelsurge || false,
     gameType: fieldOptions.gameType || "Singles",
     getSide: function (slot) {
       const side = slot === 0 ? attackerSide : defenderSide;
       return {
-        isReflect: side.reflect || false,
-        isLightScreen: side.lightScreen || false,
-        isAuroraVeil: side.auroraVeil || false,
-        isTailwind: side.tailwind || false,
-        isFriendGuard: side.friendGuard || false,
-        isHelpingHand: side.helpingHand || false,
-        isPowerSpot: side.powerSpot || false,
-        isBattery: side.battery || false,
-        isSteelySpirit: side.steelySpirit || false,
-        isFlowerGift: side.flowerGift || false,
+        isReflect: side.isReflect || false,
+        isLightScreen: side.isLightScreen || false,
+        isAuroraVeil: side.isAuroraVeil || false,
+        isTailwind: side.isTailwind || false,
+        isFriendGuard: side.isFriendGuard || false,
+        isHelpingHand: side.isHelpingHand || false,
+        isPowerSpot: side.isPowerSpot || false,
+        isBattery: side.isBattery || false,
+        isSteelySpirit: side.isSteelySpirit || false,
+        isFlowerGift: side.isFlowerGift || false,
       };
     },
     getWeather: function () {
@@ -873,7 +881,8 @@ function convertToNcpField(fieldOptions) {
       return false;
     },
     getTailwind: function (slot) {
-      return false;
+      const side = slot === 0 ? attackerSide : defenderSide;
+      return side.isTailwind || false;
     },
     getSwamp: function (slot) {
       return false;
@@ -907,7 +916,7 @@ async function getGen() {
 
 // --- Main calculation function ---
 
-export async function calculateDamage(attacker, defender, moveName, fieldOptions = {}) {
+export async function calculateDamage(attacker, defender, moveName, fieldOptions = {}, defenderSlot = 1) {
   if (!attacker.name || !defender.name || !moveName) return null;
 
   const calc = await loadCalc();
@@ -951,10 +960,27 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
   // Set up the attacker's moves (NCP expects moves array on the Pokemon)
   ncpAttacker.moves = [ncpMove];
 
+  // GET_DAMAGE_SV's 4th param is the defender's side object (from field.getSide()).
+  // Merge the defender's side properties onto the full field so the engine can
+  // read both full-field props (weather, terrain, isGravity) and side props
+  // (isReflect, isLightScreen, isHelpingHand, etc.) from one object.
+  // defenderSlot 0 = attackerSide (Left), 1 = defenderSide (Right).
+  const defenderSideProps = defenderSlot === 0
+    ? (fieldOptions.attackerSide || {})
+    : (fieldOptions.defenderSide || {});
+  const ncpFieldWithSides = {
+    ...ncpField,
+    isReflect: defenderSideProps.isReflect || false,
+    isLightScreen: defenderSideProps.isLightScreen || false,
+    isAuroraVeil: defenderSideProps.isAuroraVeil || false,
+    isFriendGuard: defenderSideProps.isFriendGuard || false,
+    isHelpingHand: defenderSideProps.isHelpingHand || false,
+  };
+
   // Use GET_DAMAGE_SV for Champions/gen 10 calculation
   let result;
   try {
-    result = calc.GET_DAMAGE_SV(ncpAttacker, ncpDefender, ncpMove, ncpField);
+    result = calc.GET_DAMAGE_SV(ncpAttacker, ncpDefender, ncpMove, ncpFieldWithSides);
   } catch (e) {
     console.error("Damage calc error:", e);
     return null;

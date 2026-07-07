@@ -63,8 +63,9 @@ function applyStatModifiers(baseStats, side, field, sideField) {
   else if (ability === "Slow Start" && side.abilityOn) speMult *= 0.5;
   if (item === "Choice Scarf" && ability !== "Unburden") speMult *= 1.5;
   else if (item === "Iron Ball") speMult *= 0.5;
-  if (status === "par" && ability !== "Quick Feet") speMult *= 0.5;
   stats.spe = Math.floor(stats.spe * speMult);
+  // Paralysis applied after other speed modifiers (matches NCP engine order)
+  if (status === "par" && ability !== "Quick Feet") stats.spe = Math.floor(stats.spe / 2);
 
   // Hustle: Atk * 1.5
   if (ability === "Hustle") stats.atk = Math.floor(stats.atk * 1.5);
@@ -84,7 +85,7 @@ function applyBoosts(stats, boosts) {
   for (const key of ["atk", "def", "spa", "spd", "spe"]) {
     const b = boosts[key] ?? 0;
     if (b > 0) result[key] = Math.floor((result[key] * (2 + b)) / 2);
-    else if (b < 0) result[key] = Math.floor((result[key] * 2) / (2 - b));
+    else if (b < 0) result[key] = Math.max(1, Math.floor((result[key] * 2) / (2 - b)));
   }
   return result;
 }
@@ -533,16 +534,19 @@ function CalcPokemonSide({ label, side, onChange, onOpenSearch, pokedexMap, item
   // Mega evolution detection
   const megaInfo = useMemo(() => {
     if (!side.item || !isMegaStone(side.item) || !pokedexMap) return null;
-    // Floettite only works with Floette-Eternal or Floette-Mega, not base Floette
-    if (side.item === "floettite") {
-      const entry = pokedexMap[side.name.toLowerCase()];
-      if (!entry || (entry.forme !== "Eternal" && entry.forme !== "Mega")) return null;
-    }
+    // Stone must correspond to the current Pokemon
     const megaEntry = getMegaFormeForStone(side.item, pokedexMap);
     if (!megaEntry) return null;
     const baseEntry = getBaseForme(megaEntry, pokedexMap);
+    if (!baseEntry || !mon) return null;
+    // Only show toggle if this Pokemon is the base form or already the mega forme
+    if (mon.name !== baseEntry.name && mon.name !== megaEntry.name) return null;
+    // Floettite only works with Floette-Eternal or Floette-Mega, not base Floette
+    if (side.item === "floettite") {
+      if (mon.forme !== "Eternal" && mon.forme !== "Mega") return null;
+    }
     return { megaEntry, baseEntry };
-  }, [side.item, side.name, pokedexMap]);
+  }, [side.item, side.name, pokedexMap, mon]);
 
   const isMega = megaInfo && mon && megaInfo.megaEntry.name === mon.name;
   const preMegaAbility = useRef(null);
@@ -1730,7 +1734,7 @@ export default function CalculatorPage() {
         atkMoves.map(async (m) => {
           if (!m) return null;
           try {
-            return await calculateDamage(atkSide, defSide, m, f);
+            return await calculateDamage(atkSide, defSide, m, f, 1);
           } catch {
             return null;
           }
@@ -1743,7 +1747,7 @@ export default function CalculatorPage() {
         defMoves.map(async (m) => {
           if (!m) return null;
           try {
-            return await calculateDamage(defSide, atkSide, m, f);
+            return await calculateDamage(defSide, atkSide, m, f, 0);
           } catch {
             return null;
           }
