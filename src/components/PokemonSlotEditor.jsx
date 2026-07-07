@@ -16,6 +16,7 @@ import { getLearnset } from "../lib/learnsets.js";
 import { STAT_CONFIG, NATURES, NATURE_MAP } from "../lib/constants.js";
 import { calcFinalStatsSP, statRangeSP, SP_MAX_TOTAL, SP_MAX_PER_STAT, DEFAULT_LEVEL } from "../lib/stats.js";
 import { getAbilityByName } from "../lib/abilities.js";
+import { getStoneForForme, getMegaAbility } from "../lib/mega.js";
 import { buildAliasSet, matchesAlias } from "../lib/utils.js";
 import { useRowHeight, useMobileMedia } from "../lib/hooks.js";
 
@@ -306,19 +307,26 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
 
   const handlePokemonSelect = useCallback(
     (p) => {
+      // Check if this is a mega forme
+      const isMegaForme = p.forme && p.forme.startsWith("Mega");
+      const megaStone = isMegaForme ? getStoneForForme(p, pokedexMap) : null;
+      const megaAbility = isMegaForme ? getMegaAbility(p) : null;
+
       onUpdate(slotIndex, {
         name: p.name,
-        item: null,
-        ability: null,
+        item: megaStone || null,
+        ability: megaAbility || null,
         moves: [null, null, null, null],
         sp: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
         nature: null,
       });
-      setSelectedPart("item");
+      // Skip to first move if mega forme selected, otherwise go to item
+      setSelectedPart(isMegaForme ? "move" : "item");
+      setSelectedMoveIdx(isMegaForme ? 0 : null);
       setPokemonSearch("");
       setPokemonFilterEntries([]);
     },
-    [slotIndex, onUpdate],
+    [slotIndex, onUpdate, pokedexMap],
   );
 
   const refocusPokemonSearch = useCallback(() => {
@@ -503,25 +511,27 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
                 {mon ? (
                   STAT_CONFIG.map(({ key, label }) => {
                     const val = previewStats?.[key] ?? mon.baseStats?.[key] ?? null;
+                    const spVal = slot.sp?.[key] ?? 0;
                     const [min, max] = statRangeSP(key === "hp");
                     const pct = val == null ? 0 : Math.max(0, Math.min(100, (val / max) * 100));
                     const hue = val == null ? 0 : Math.min(360, Math.floor((val * 180) / max));
                     const hint = natureObj?.plus === key ? "+" : natureObj?.minus === key ? "-" : null;
                     return (
-                      <div key={key} className="se-stat-item">
-                        <span className="se-stat-label">{label}</span>
+                      <div key={key} className="calc-stat-preview-row">
+                        <span className="calc-stat-preview-label">{label}</span>
+                        <span className="calc-stat-sp-val">{spVal}</span>
+                        <span
+                          className={`calc-stat-hint ${hint === "+" ? "calc-boost--plus" : hint === "-" ? "calc-boost--minus" : ""}`}
+                        >
+                          {hint || ""}
+                        </span>
                         <div className="se-stat-bar-mini">
                           <div
                             className="se-stat-fill-mini"
                             style={{ width: pct + "%", background: `hsl(${hue},85%,45%)` }}
                           />
                         </div>
-                        <span className="se-stat-value">{fmtStat(slot.sp?.[key] ?? 0)}</span>
-                        <span
-                          className={`se-stat-hint ${hint === "+" ? "se-stat-hint--plus" : hint === "-" ? "se-stat-hint--minus" : ""}`}
-                        >
-                          {hint || ""}
-                        </span>
+                        <span className="calc-stat-preview-val">{val}</span>
                       </div>
                     );
                   })

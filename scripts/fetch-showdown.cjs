@@ -54,6 +54,7 @@ const USER_AGENT = process.env.SHOWDOWN_USER_AGENT || 'pokemon-tools-build';
 const CDN_BASE = 'https://play.pokemonshowdown.com/data/';
 const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/smogon/pokemon-showdown/master/';
 const CLIENT_GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/smogon/pokemon-showdown-client/master/';
+const NCP_CALC_RAW_BASE = 'https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/';
 
 const COMPILED_FILES = ['pokedex', 'moves', 'learnsets'];
 
@@ -66,6 +67,21 @@ const MASTER_TS_FILES = [
   { rel: 'data/text/items.ts' },
 ];
 
+// NCP VGC Damage Calculator setdex for Gen 10
+const NCP_SETDEX_URL = NCP_CALC_RAW_BASE + 'setdex_ncp-g10.js';
+const NCP_SETDEX_OUT = path.join(UPSTREAM_DIR, 'ncp', 'setdex_ncp-g10.js');
+
+// NCP VGC Damage Calculator pokedex (for default abilities)
+const NCP_POKEDEX_URL = NCP_CALC_RAW_BASE + 'pokedex.js';
+const NCP_POKEDEX_OUT = path.join(UPSTREAM_DIR, 'ncp', 'pokedex.js');
+
+// NCP VGC Damage Calculator source files (the core calculation engine)
+const NCP_CALC_FILES = [
+  'damage_MASTER.js',
+  'damage_SV.js',
+  'ko_chance.js',
+];
+
 // Files from pokemon-showdown-client.  battle-dex-data.ts holds the
 // per-species icon-cell override table (BattlePokemonIconIndexes) that
 // forms (mega, gmax, alola, ...) need in order to render from the
@@ -73,6 +89,8 @@ const MASTER_TS_FILES = [
 const CLIENT_TS_FILES = [
   { rel: 'play.pokemonshowdown.com/src/battle-dex-data.ts' },
 ];
+
+
 
 function ensureDir(p) {
   fs.mkdirSync(p, { recursive: true });
@@ -84,17 +102,32 @@ function isFresh(file) {
   return ageMs < TTL_HOURS * 3600 * 1000;
 }
 
-function download(url) {
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function download(url, retries = 3) {
   /*
    * GET `url` and resolve with the body buffer.  On non-2xx,
    * rejects with an Error whose `.statusCode` reflects the HTTP
    * status so callers can distinguish 404 (file truly missing
    * upstream) from 5xx / timeout (transient failure).
+   *
+   * On HTTP 429 (rate limit), waits and retries up to `retries`
+   * times with exponential backoff (2s, 4s, 8s).  Respects the
+   * Retry-After header if present.
    */
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { 'User-Agent': USER_AGENT } }, (res) => {
       if (res.statusCode === 301 || res.statusCode === 302) {
-        return download(res.headers.location).then(resolve, reject);
+        return download(res.headers.location, retries).then(resolve, reject);
+      }
+      if (res.statusCode === 429 && retries > 0) {
+        const retryAfter = parseInt(res.headers['retry-after'], 10);
+        const delay = retryAfter ? retryAfter * 1000 : (4 - retries) * 2000;
+        console.log(`    429 rate-limited, retrying in ${delay / 1000}s... (${retries} left)`);
+        res.resume();
+        return sleep(delay).then(() => download(url, retries - 1)).then(resolve, reject);
       }
       if (res.statusCode !== 200) {
         return reject(Object.assign(
@@ -147,10 +180,13 @@ async function fetchTo(out, url, opts = {}) {
     const size = (buf.length / 1024).toFixed(1);
     console.log(`    -> ${path.relative(CACHE_DIR, out)} (${size} KB)`);
   } catch (err) {
-    if (opts.optional && err.statusCode === 404) {
+    if (opts.optional) {
+      const reason = err.statusCode === 404
+        ? `HTTP 404 - upstream does not define this file`
+        : `fetch failed (${err.message})`;
       console.warn(
-        `  - ${path.relative(CACHE_DIR, out)}: HTTP 404 - upstream ` +
-        `does not define this file, skipping (build will use default config)`
+        `  - ${path.relative(CACHE_DIR, out)}: ${reason}, ` +
+        `skipping (build will use default config)`
       );
       if (fs.existsSync(out)) {
         /*
@@ -224,6 +260,11 @@ async function fetchOneClient(rel) {
   await fetchTo(out, CLIENT_GITHUB_RAW_BASE + rel);
 }
 
+async function fetchOneNcpCalc(rel) {
+  const out = path.join(UPSTREAM_DIR, 'ncp-calc', rel);
+  await fetchTo(out, NCP_CALC_RAW_BASE + rel);
+}
+
 function summarisePerModCoverage(modDirs) {
   /*
    * After the fetch loop, inspect which per-mod files actually
@@ -287,6 +328,17 @@ async function main() {
   for (const { rel } of CLIENT_TS_FILES) {
     await fetchOneClient(rel);
   }
+
+  console.log('\nNCP Damage calculator source (from GitHub)');
+  for (const rel of NCP_CALC_FILES) {
+    await fetchOneNcpCalc(rel);
+  }
+
+  console.log('\nNCP VGC Damage Calculator setdex (from GitHub)');
+  await fetchTo(NCP_SETDEX_OUT, NCP_SETDEX_URL);
+
+  console.log('\nNCP VGC Damage Calculator pokedex (from GitHub)');
+  await fetchTo(NCP_POKEDEX_OUT, NCP_POKEDEX_URL);
 
   if (modDirs.length === 0) {
     console.warn('  ! no mod dirs discovered from regulations-config (no per-mod files fetched)');

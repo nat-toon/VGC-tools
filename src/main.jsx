@@ -5,6 +5,7 @@ import App from './App.jsx';
 import './styles/app.css';
 import './styles/types.css';
 import './styles/categories.css';
+import './styles/mega.css';
 
 let rafId = 0;
 function scheduleAdjust() {
