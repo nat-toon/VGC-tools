@@ -231,16 +231,25 @@ function CalcStatsPanel({ side, mon, onChange, field, sideField }) {
               <div className="se-stats-fill" style={{ width: pct + "%", background: `hsl(${hue},85%,45%)` }} />
             </div>
             <div className="calc-stat-inputs">
-              <input
-                className="calc-ev-input"
-                type="number"
-                inputMode="numeric"
-                value={spVal}
-                onChange={(e) => handleSpChange(key, e.target.value)}
-                min={0}
-                max={SP_MAX_PER_STAT}
-                title="SP"
-              />
+              <div className="se-stats-sp-wrap">
+                <input
+                  className="calc-ev-input"
+                  type="number"
+                  inputMode="numeric"
+                  value={spVal}
+                  onChange={(e) => handleSpChange(key, e.target.value)}
+                  min={0}
+                  max={SP_MAX_PER_STAT}
+                  title="SP"
+                />
+                {hint && key !== "hp" && (
+                  <span
+                    className={`se-stats-sp-hint ${hint === "+" ? "se-stats-sp-hint--plus" : "se-stats-sp-hint--minus"}`}
+                  >
+                    {hint}
+                  </span>
+                )}
+              </div>
             </div>
             <input
               type="range"
@@ -278,13 +287,6 @@ function CalcStatsPanel({ side, mon, onChange, field, sideField }) {
               </button>
             </div>
             <span className="se-stats-final">{value}</span>
-            {hint && key !== "hp" && (
-              <span
-                className={`se-stats-sp-hint ${hint === "+" ? "se-stats-sp-hint--plus" : "se-stats-sp-hint--minus"}`}
-              >
-                {hint}
-              </span>
-            )}
           </div>
         );
       })}
@@ -1312,103 +1314,471 @@ function PokemonSearchPanelInline({ target, allPokemon, side, onChange, onAdvanc
 
 /* ---------- Result + Field ---------- */
 
+function ordinal(n) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
+}
+
+function formatRolls(res) {
+  if (!res?.hitRolls?.length) return null;
+  if (res.isMultiHit) {
+    return `(${res.hitRolls.map((arr, i) => `${ordinal(i + 1)} hit: ${arr.join(", ")}`).join("; ")})`;
+  }
+  return `(${res.hitRolls[0].join(", ")})`;
+}
+
+function ResultMoveRow({
+  side,
+  index,
+  name,
+  res,
+  isSelected,
+  onSelectSlot,
+  critOverrides,
+  onChangeCrit,
+  hitsOverrides,
+  onChangeHits,
+  rageFistOverrides,
+  onChangeRageFistHits,
+  lastRespectsOverrides,
+  onChangeLastRespects,
+}) {
+  const mv = name ? getMove(name) : null;
+  const rText = res?.recoil?.text?.replace(/recoil damage/g, "recoil") || null;
+  const hText = res?.recovery?.text?.replace(/recovered/g, "healed") || null;
+  const critKey = `${side}-${index}`;
+  const crit = !!critOverrides[critKey];
+  const isLastRespects = name === "lastrespects";
+  const isMultiHit =
+    (mv?.multihit != null &&
+      (Array.isArray(mv.multihit) ? mv.multihit[1] > 1 : mv.multihit > 1)) ||
+    (res?.maxHits || 1) > 1;
+  const isRageFist = name === "ragefist";
+  const maxHits = res?.maxHits || 1;
+  return (
+    <div
+      className={`result-move-row ${res ? "" : "result-move-row--empty"} ${isSelected ? "result-move-row--selected" : ""}`}
+      onClick={() => name && onSelectSlot({ side, index })}
+    >
+      <span className="result-move-left">
+        {mv && <TypeIcon type={mv.type} size={16} />}
+        <span className="result-move-name">{mv?.name || name || "(No Move)"}</span>
+        {res && (
+          <span className="result-row-controls" onClick={(e) => e.stopPropagation()}>
+            <button
+              className={`result-row-crit ${crit ? "result-row-crit--active" : ""}`}
+              onClick={() => onChangeCrit(side, index, !crit)}
+            >
+              Crit
+            </button>
+            {isMultiHit && (
+              <span className="result-row-hits">
+                <span className="result-row-hits-label">Hits</span>
+                <button
+                  className="result-row-hits-btn"
+                  disabled={(hitsOverrides[critKey] ?? maxHits) <= 1}
+                  onClick={() => onChangeHits(side, index, Math.max(1, (hitsOverrides[critKey] ?? maxHits) - 1))}
+                >
+                  −
+                </button>
+                <span className="result-row-hits-value">
+                  {hitsOverrides[critKey] ?? maxHits} / {maxHits}
+                </span>
+                <button
+                  className="result-row-hits-btn"
+                  disabled={(hitsOverrides[critKey] ?? maxHits) >= maxHits}
+                  onClick={() => {
+                    const next = Math.min(maxHits, (hitsOverrides[critKey] ?? maxHits) + 1);
+                    onChangeHits(side, index, next >= maxHits ? null : next);
+                  }}
+                >
+                  +
+                </button>
+              </span>
+            )}
+            {isRageFist && (
+              <span className="result-row-hits">
+                <span className="result-row-hits-label">Hits</span>
+                <button
+                  className="result-row-hits-btn"
+                  disabled={(rageFistOverrides[critKey] ?? 0) <= 0}
+                  onClick={() => onChangeRageFistHits(side, index, Math.max(0, (rageFistOverrides[critKey] ?? 0) - 1))}
+                >
+                  −
+                </button>
+                <span className="result-row-hits-value">{rageFistOverrides[critKey] ?? 0}</span>
+                <button
+                  className="result-row-hits-btn"
+                  disabled={(rageFistOverrides[critKey] ?? 0) >= 6}
+                  onClick={() => onChangeRageFistHits(side, index, Math.min(6, (rageFistOverrides[critKey] ?? 0) + 1))}
+                >
+                  +
+                </button>
+                <span className="result-row-hits-bp">BP: {50 + (rageFistOverrides[critKey] ?? 0) * 50}</span>
+              </span>
+            )}
+            {isLastRespects && (
+              <span className="result-row-hits">
+                <span className="result-row-hits-label">Fainted</span>
+                <button
+                  className="result-row-hits-btn"
+                  disabled={(lastRespectsOverrides[critKey] ?? 0) <= 0}
+                  onClick={() => onChangeLastRespects(side, index, Math.max(0, (lastRespectsOverrides[critKey] ?? 0) - 1))}
+                >
+                  −
+                </button>
+                <span className="result-row-hits-value">{lastRespectsOverrides[critKey] ?? 0}</span>
+                <button
+                  className="result-row-hits-btn"
+                  disabled={(lastRespectsOverrides[critKey] ?? 0) >= 5}
+                  onClick={() => onChangeLastRespects(side, index, Math.min(5, (lastRespectsOverrides[critKey] ?? 0) + 1))}
+                >
+                  +
+                </button>
+                <span className="result-row-hits-bp">BP: {50 + (lastRespectsOverrides[critKey] ?? 0) * 50}</span>
+              </span>
+            )}
+          </span>
+        )}
+      </span>
+      <span className="result-move-right">
+        <span className="result-move-range">{res ? `${res.minPct} - ${res.maxPct}%` : "0 - 0%"}</span>
+        {hText && <span className="result-move-recovery">{hText}</span>}
+        {rText && <span className="result-move-recoil">{rText}</span>}
+      </span>
+    </div>
+  );
+}
+
+function weatherAffectsDamage(weather, moveType) {
+  if (!weather || !moveType) return false;
+  if (weather === "Sun") return moveType === "Fire" || moveType === "Water";
+  if (weather === "Rain") return moveType === "Water" || moveType === "Fire";
+  return false;
+}
+function terrainAffectsDamage(terrain, moveType) {
+  if (!terrain || !moveType) return false;
+  if (terrain === "Electric") return moveType === "Electric";
+  if (terrain === "Grassy") return moveType === "Grass";
+  if (terrain === "Misty") return moveType === "Dragon";
+  if (terrain === "Psychic") return moveType === "Psychic";
+  return false;
+}
+
 function ResultDisplay({
   result,
   attacker,
   defender,
+  attackerMon,
+  defenderMon,
+  field,
+  itemsMap,
   selectedSlot,
   onSelectSlot,
+  hitsOverrides,
+  onChangeHits,
+  critOverrides,
+  onChangeCrit,
+  rageFistOverrides,
+  onChangeRageFistHits,
+  lastRespectsOverrides,
+  onChangeLastRespects,
 }) {
   const [copied, setCopied] = useState(false);
-  const attackerMoves = result?.attackerMoves || [];
-  const defenderMoves = result?.defenderMoves || [];
-
   const padTo4 = (moves) => {
     const padded = [...moves];
     while (padded.length < 4) padded.push({ name: "", result: null });
     return padded.slice(0, 4);
   };
 
-  const paddedAtk = padTo4(attackerMoves);
-  const paddedDef = padTo4(defenderMoves);
+  // Build rows from each side's selected moves, attaching any calc result so the
+  // moves stay populated (showing 0-0 damage) even before both sides exist.
+  const atkMoves = (attacker?.moves || ["", "", "", ""]).map((name, i) => ({
+    name,
+    result: result?.attackerMoves?.[i]?.result || null,
+  }));
+  const defMoves = (defender?.moves || ["", "", "", ""]).map((name, i) => ({
+    name,
+    result: result?.defenderMoves?.[i]?.result || null,
+  }));
+
+  const paddedAtk = padTo4(atkMoves);
+  const paddedDef = padTo4(defMoves);
   const selectedSide = selectedSlot?.side;
   const selectedIdx = selectedSlot?.index ?? 0;
+  const isAtkSelected = selectedSide !== "defender";
+  const atkSide = isAtkSelected ? attacker : defender;
+  const defSide = isAtkSelected ? defender : attacker;
   const selectedRes = selectedSide === "defender"
     ? paddedDef[selectedIdx]?.result || paddedDef.find((m) => m.result)?.result || null
     : paddedAtk[selectedIdx]?.result || paddedAtk.find((m) => m.result)?.result || null;
   const selectedDesc = selectedRes?.desc || "";
   const recoilText = selectedRes?.recoil?.text?.replace(/recoil damage/g, "recoil") || null;
   const recoveryText = selectedRes?.recovery?.text?.replace(/recovered/g, "healed") || null;
+  const rollsText = formatRolls(selectedRes);
+  const selEntry = selectedSide === "defender" ? paddedDef[selectedIdx] : paddedAtk[selectedIdx];
+  const selMoveName = selEntry?.name || "";
+  const selMove = selMoveName ? getMove(selMoveName) : null;
+  const isStatusMove = selMove?.category === "Status";
+  const atkMatch = selectedDesc.match(/(\d+)\s+(Atk|SpA)/);
+  const defStatMatch = selectedDesc.match(/(\d+)\s+HP\s*\/\s*(\d+)\s+(Def|SpD)/);
+  const bpMatch = selectedDesc.match(/\((\d+)\s*BP\)/);
+  const bp = bpMatch ? bpMatch[1] : (selMove?.basePower ?? null);
+  const atkStat = atkMatch ? `${atkMatch[1]} ${atkMatch[2]}` : null;
+  const defHP = defStatMatch ? defStatMatch[1] : null;
+  const defDef = defStatMatch ? defStatMatch[2] : null;
+  const defDefLabel = defStatMatch ? defStatMatch[3] : null;
+  const atkNatureKey = atkMatch ? { Atk: "atk", SpA: "spa" }[atkMatch[2]] : null;
+  const defNatureKey = defDefLabel ? { Def: "def", SpD: "spd" }[defDefLabel] : null;
+  const atkNatureObj = atkSide.nature ? NATURE_MAP[atkSide.nature] : null;
+  const defNatureObj = defSide.nature ? NATURE_MAP[defSide.nature] : null;
+  const atkStatMark =
+    atkNatureObj && atkNatureKey
+      ? atkNatureObj.plus === atkNatureKey
+        ? "+"
+        : atkNatureObj.minus === atkNatureKey
+          ? "-"
+          : ""
+      : "";
+  const defStatMark =
+    defNatureObj && defNatureKey
+      ? defNatureObj.plus === defNatureKey
+        ? "+"
+        : defNatureObj.minus === defNatureKey
+          ? "-"
+          : ""
+      : "";
+  const itemName = (atkSide.item && itemsMap?.[atkSide.item]?.name) || atkSide.item || "—";
 
+  // Calc-affecting field/status factors, filtered to those relevant to this move.
+  const moveCat = selMove?.category;
+  const isPhysical = moveCat === "Physical";
+  const isSpecial = moveCat === "Special";
+  const atkFieldSide = (isAtkSelected ? field?.attackerSide : field?.defenderSide) || {};
+  const defFieldSide = (isAtkSelected ? field?.defenderSide : field?.attackerSide) || {};
+  const atkFactors = [];
+  const defFactors = [];
+  if (atkFieldSide.isHelpingHand) atkFactors.push({ label: "Helping Hand", kind: "boost" });
+  if (atkFieldSide.isPowerTrick && isPhysical) atkFactors.push({ label: "Power Trick", kind: "boost" });
+  if (atkSide.status === "brn" && isPhysical) atkFactors.push({ label: "Burn", kind: "status" });
+  if (defFieldSide.isReflect && isPhysical) defFactors.push({ label: "Reflect", kind: "reduce" });
+  if (defFieldSide.isLightScreen && isSpecial) defFactors.push({ label: "Light Screen", kind: "reduce" });
+  if (defFieldSide.isAuroraVeil) defFactors.push({ label: "Aurora Veil", kind: "reduce" });
+  if (defFieldSide.isFriendGuard) defFactors.push({ label: "Friend Guard", kind: "reduce" });
+  const fieldFactors = [];
+  const moveType = selMove?.type;
+  if (field?.weather && weatherAffectsDamage(field.weather, moveType))
+    fieldFactors.push({ label: field.weather, kind: "weather" });
+  if (field?.terrain && terrainAffectsDamage(field.terrain, moveType))
+    fieldFactors.push({ label: `${field.terrain} Terrain`, kind: "terrain" });
+  const koChance = selectedRes?.kochance || null;
+
+  // Other calc text signals from the result object.
+  const isForcedCrit = !!selectedRes?.isCrit;
+  const isMultiHitMove = !!selectedRes?.isMultiHit;
+  let multiHitLabel = null;
+  if (isMultiHitMove) {
+    const mh = selMove?.multihit;
+    if (Array.isArray(mh)) multiHitLabel = `${mh[0]}–${mh[1]} hits`;
+    else if (typeof mh === "number" && mh > 1) multiHitLabel = `${mh} hits`;
+    else multiHitLabel = `${selectedRes?.maxHits ?? 1} hits`;
+  }
+  const copyText = `${selectedDesc}${recoilText || recoveryText ? ` ${recoilText || recoveryText}` : ""}`;
   return (
     <div className="result-display">
       <div className="result-columns">
         <div className="result-col">
-          {paddedAtk.map(({ name, result: res }, i) => {
-            const mv = name ? getMove(name) : null;
-            const isSelected = selectedSlot?.side === "attacker" && selectedSlot?.index === i;
-            const rText = res?.recoil?.text?.replace(/recoil damage/g, "recoil") || null;
-            const hText = res?.recovery?.text?.replace(/recovered/g, "healed") || null;
-            return (
-              <div
-                key={i}
-                className={`result-move-row ${res ? "" : "result-move-row--empty"} ${isSelected ? "result-move-row--selected" : ""}`}
-                onClick={() => name && onSelectSlot({ side: "attacker", index: i })}
-              >
-                <span className="result-move-left">
-                  {mv && <TypeIcon type={mv.type} size={16} />}
-                  <span className="result-move-name">{mv?.name || name || "(No Move)"}</span>
-                </span>
-                <span className="result-move-right">
-                  <span className="result-move-range">{res ? `${res.minPct} - ${res.maxPct}%` : "0 - 0%"}</span>
-                  {hText && <span className="result-move-recovery">{hText}</span>}
-                  {rText && <span className="result-move-recoil">{rText}</span>}
-                </span>
-              </div>
-            );
-          })}
+          <div className="result-col-header result-col-header--mon">
+            {attackerMon ? (
+              <ModalIcon mon={attackerMon} />
+            ) : (
+              <span className="result-col-icon-ph">?</span>
+            )}
+            <span className={`result-col-name${attackerMon ? "" : " result-col-name--empty"}`}>
+              {attackerMon?.name || "No Pokémon"}
+            </span>
+            <span className="result-col-types">
+              {(attackerMon?.types || []).map((t) => (
+                <TypeIcon key={t} type={t} size={14} />
+              ))}
+            </span>
+          </div>
+          {paddedAtk.map(({ name, result: res }, i) => (
+            <ResultMoveRow
+              key={i}
+              side="attacker"
+              index={i}
+              name={name}
+              res={res}
+              isSelected={selectedSlot?.side === "attacker" && selectedSlot?.index === i}
+              onSelectSlot={onSelectSlot}
+              critOverrides={critOverrides}
+              onChangeCrit={onChangeCrit}
+              hitsOverrides={hitsOverrides}
+              onChangeHits={onChangeHits}
+              rageFistOverrides={rageFistOverrides}
+              onChangeRageFistHits={onChangeRageFistHits}
+              lastRespectsOverrides={lastRespectsOverrides}
+              onChangeLastRespects={onChangeLastRespects}
+            />
+          ))}
         </div>
         <div className="result-col">
-          {paddedDef.map(({ name, result: res }, i) => {
-            const mv = name ? getMove(name) : null;
-            const isSelected = selectedSide === "defender" && selectedIdx === i;
-            const rText = res?.recoil?.text?.replace(/recoil damage/g, "recoil") || null;
-            const hText = res?.recovery?.text?.replace(/recovered/g, "healed") || null;
-            return (
-              <div
-                key={i}
-                className={`result-move-row ${res ? "" : "result-move-row--empty"} ${isSelected ? "result-move-row--selected" : ""}`}
-                onClick={() => name && onSelectSlot({ side: "defender", index: i })}
-              >
-                <span className="result-move-left">
-                  {mv && <TypeIcon type={mv.type} size={16} />}
-                  <span className="result-move-name">{mv?.name || name || "(No Move)"}</span>
-                </span>
-                <span className="result-move-right">
-                  <span className="result-move-range">{res ? `${res.minPct} - ${res.maxPct}%` : "0 - 0%"}</span>
-                  {hText && <span className="result-move-recovery">{hText}</span>}
-                  {rText && <span className="result-move-recoil">{rText}</span>}
-                </span>
-              </div>
-            );
-          })}
+          <div className="result-col-header result-col-header--mon">
+            {defenderMon ? (
+              <ModalIcon mon={defenderMon} />
+            ) : (
+              <span className="result-col-icon-ph">?</span>
+            )}
+            <span className={`result-col-name${defenderMon ? "" : " result-col-name--empty"}`}>
+              {defenderMon?.name || "No Pokémon"}
+            </span>
+            <span className="result-col-types">
+              {(defenderMon?.types || []).map((t) => (
+                <TypeIcon key={t} type={t} size={14} />
+              ))}
+            </span>
+          </div>
+          {paddedDef.map(({ name, result: res }, i) => (
+            <ResultMoveRow
+              key={i}
+              side="defender"
+              index={i}
+              name={name}
+              res={res}
+              isSelected={selectedSlot?.side === "defender" && selectedSlot?.index === i}
+              onSelectSlot={onSelectSlot}
+              critOverrides={critOverrides}
+              onChangeCrit={onChangeCrit}
+              hitsOverrides={hitsOverrides}
+              onChangeHits={onChangeHits}
+              rageFistOverrides={rageFistOverrides}
+              onChangeRageFistHits={onChangeRageFistHits}
+              lastRespectsOverrides={lastRespectsOverrides}
+              onChangeLastRespects={onChangeLastRespects}
+            />
+          ))}
         </div>
       </div>
-      {selectedDesc && (
-        <div className="result-top">
-          <div
-            className="result-desc"
-            onClick={() => {
-              const text = `${selectedDesc}${recoilText || recoveryText ? ` ${recoilText || recoveryText}` : ""}`;
-              navigator.clipboard.writeText(text);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1200);
-            }}
-            title="Click to copy"
-          >
-            {selectedDesc}{recoilText || recoveryText ? ` ${recoilText || recoveryText}` : ""}
-            {copied && <span className="result-desc-copied">Copied!</span>}
+      {selectedRes && (
+        <div
+          className="result-detail"
+          onClick={() => {
+            navigator.clipboard.writeText(copyText);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1200);
+          }}
+          title="Click to copy"
+        >
+          <div className="result-detail-head">
+            {selMove && <TypeIcon type={selMove.type} size={20} />}
+            {selMove && <CategoryIcon category={selMove.category} width={18} />}
+            <span className="result-detail-move">{selMove?.name || selMoveName}</span>
+            <span className="result-detail-head-right">
+              {bp != null && !isStatusMove && <span className="result-detail-bp">{bp} BP</span>}
+              {isStatusMove && <span className="result-detail-bp">Status</span>}
+              {isForcedCrit && <span className="result-detail-badge result-detail-badge--crit">Crit</span>}
+              {multiHitLabel && (
+                <span className="result-detail-badge result-detail-badge--multi">{multiHitLabel}</span>
+              )}
+            </span>
           </div>
+          {fieldFactors.length > 0 && !isStatusMove && (
+            <div className="result-detail-field">
+              {fieldFactors.map((f) => (
+                <span key={f.label} className={`result-factor-chip result-factor-chip--${f.kind}`}>
+                  {f.label}
+                </span>
+              ))}
+            </div>
+          )}
+          {!isStatusMove && (
+            <div className="result-detail-cols">
+            <div className="result-detail-box">
+              <span className="result-detail-label">Attacker</span>
+              <span className="result-detail-value">{atkSide.name}</span>
+              <span className="result-detail-sub">
+                {!isStatusMove &&
+                  (atkStat ? (
+                    <>
+                      {atkStat}
+                      {atkStatMark && (
+                        <span className={`result-nature-mark calc-boost--${atkStatMark === "+" ? "plus" : "minus"}`}>
+                          {atkStatMark}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    ""
+                  ))}
+                {atkSide.ability ? ` · ${atkSide.ability}` : ""}
+                {atkSide.item ? ` · ${itemName}` : ""}
+                {atkSide.nature ? ` · ${atkSide.nature}` : ""}
+              </span>
+              {atkFactors.length > 0 && (
+                <span className="result-detail-factors">
+                  {atkFactors.map((f) => (
+                    <span key={f.label} className={`result-factor-chip result-factor-chip--${f.kind}`}>
+                      {f.label}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </div>
+            <div className="result-detail-box">
+              <span className="result-detail-label">Defender</span>
+              <span className="result-detail-value">{defSide.name}</span>
+              <span className="result-detail-sub">
+                {defHP ? `${defHP} HP` : ""}
+                {defDef ? (
+                  <>
+                    {" / "}
+                    {defDef} {defDefLabel}
+                    {defStatMark && (
+                      <span className={`result-nature-mark calc-boost--${defStatMark === "+" ? "plus" : "minus"}`}>
+                        {defStatMark}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  ""
+                )}
+                {defSide.nature ? ` · ${defSide.nature}` : ""}
+              </span>
+              {defFactors.length > 0 && (
+                <span className="result-detail-factors">
+                  {defFactors.map((f) => (
+                    <span key={f.label} className={`result-factor-chip result-factor-chip--${f.kind}`}>
+                      {f.label}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </div>
+          </div>
+          )}
+          {!isStatusMove ? (
+            <div className="result-detail-dmg">
+              <span className="result-detail-range">
+                {selectedRes.minPct}–{selectedRes.maxPct}%
+              </span>
+              <span className="result-detail-raw">
+                {selectedRes.min}–{selectedRes.max} dmg
+              </span>
+              {koChance && <span className="result-detail-ko">{koChance}</span>}
+            </div>
+          ) : (
+            <div className="result-detail-dmg result-detail-dmg--status">Status move — no damage</div>
+          )}
+          {(recoilText || recoveryText) && (
+            <div className="result-detail-extra">
+              {recoveryText && <span className="result-detail-recovery">{recoveryText}</span>}
+              {recoilText && <span className="result-detail-recoil">{recoilText}</span>}
+            </div>
+          )}
+          {rollsText && !isStatusMove && <div className="result-detail-rolls">{rollsText}</div>}
+          {copied && <span className="result-detail-copied">Copied!</span>}
         </div>
       )}
     </div>
@@ -1423,23 +1793,6 @@ function ToggleButton({ active, onClick, children }) {
   );
 }
 
-function SpikesButtons({ value, onChange }) {
-  return (
-    <div className="field-spikes-group">
-      {[0, 1, 2, 3].map((n) => (
-        <button
-          key={n}
-          className={`field-spikes-btn ${value === n ? "field-spikes-btn--active" : ""}`}
-          onClick={() => onChange(n)}
-          type="button"
-        >
-          {n}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function SideFieldToggles({ side, onChange, label }) {
   const set = (key, val) => onChange({ ...side, [key]: val });
   const toggle = (key) => set(key, !side[key]);
@@ -1448,28 +1801,14 @@ function SideFieldToggles({ side, onChange, label }) {
     <div className="field-side-toggles">
       <div className="field-side-label">{label}</div>
       <div className="field-side-row">
-        <ToggleButton active={!!side.isSR} onClick={() => toggle("isSR")}>
-          Stealth Rock
-        </ToggleButton>
-        <SpikesButtons value={side.spikes || 0} onChange={(n) => set("spikes", n || undefined)} />
-      </div>
-      <div className="field-side-row">
         <ToggleButton active={!!side.isReflect} onClick={() => toggle("isReflect")}>
           Reflect
         </ToggleButton>
         <ToggleButton active={!!side.isLightScreen} onClick={() => toggle("isLightScreen")}>
           Light Screen
         </ToggleButton>
-      </div>
-      <div className="field-side-row">
-        <ToggleButton active={!!side.isProtected} onClick={() => toggle("isProtected")}>
-          Protect
-        </ToggleButton>
-        <ToggleButton active={!!side.isSeeded} onClick={() => toggle("isSeeded")}>
-          Leech Seed
-        </ToggleButton>
-        <ToggleButton active={!!side.isSaltCured} onClick={() => toggle("isSaltCured")}>
-          Salt Cure
+        <ToggleButton active={!!side.isAuroraVeil} onClick={() => toggle("isAuroraVeil")}>
+          Aurora Veil
         </ToggleButton>
       </div>
       <div className="field-side-row">
@@ -1482,24 +1821,8 @@ function SideFieldToggles({ side, onChange, label }) {
         <ToggleButton active={!!side.isPowerTrick} onClick={() => toggle("isPowerTrick")}>
           Power Trick
         </ToggleButton>
-      </div>
-      <div className="field-side-row">
         <ToggleButton active={!!side.isFriendGuard} onClick={() => toggle("isFriendGuard")}>
           Friend Guard
-        </ToggleButton>
-        <ToggleButton active={!!side.isAuroraVeil} onClick={() => toggle("isAuroraVeil")}>
-          Aurora Veil
-        </ToggleButton>
-      </div>
-      <div className="field-side-row">
-        <ToggleButton active={!!side.isAllStats} onClick={() => toggle("isAllStats")}>
-          +1 All Stats
-        </ToggleButton>
-        <ToggleButton
-          active={side.isSwitching === "out"}
-          onClick={() => set("isSwitching", side.isSwitching === "out" ? undefined : "out")}
-        >
-          Switching Out
         </ToggleButton>
       </div>
     </div>
@@ -1516,9 +1839,14 @@ function FieldOptions({ field, onChange, regulation, onRegulationChange }) {
   return (
     <div className="field-options">
       <div className="field-options-row">
+        {/* Left side */}
+        <div className="field-options-side field-options-side--left">
+          <SideFieldToggles side={field.attackerSide || {}} onChange={setAttackerSide} label="Left" />
+        </div>
+
         {/* Center: global field */}
         <div className="field-options-center">
-          <div className="field-section">
+          <div className="field-options-top-row">
             <select
               className="field-reg-select"
               value={regulation}
@@ -1530,53 +1858,53 @@ function FieldOptions({ field, onChange, regulation, onRegulationChange }) {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="field-toggle-row">
-            <ToggleButton active={field.gameType === "Singles"} onClick={() => setField("gameType", "Singles")}>
-              Singles
-            </ToggleButton>
-            <ToggleButton active={field.gameType === "Doubles"} onClick={() => setField("gameType", "Doubles")}>
-              Doubles
-            </ToggleButton>
-          </div>
-          <div className="field-toggle-row field-toggle-row--center">
-            {["Electric", "Grassy", "Misty", "Psychic"].map((t) => (
-              <ToggleButton
-                key={t}
-                active={field.terrain === t}
-                onClick={() => setField("terrain", field.terrain === t ? undefined : t)}
-              >
-                {t === "Psychic" ? "Psychic" : t}
+            <div className="field-toggle-row">
+              <ToggleButton active={field.gameType === "Singles"} onClick={() => setField("gameType", "Singles")}>
+                Singles
               </ToggleButton>
-            ))}
-          </div>
-          <div className="field-toggle-row field-toggle-row--center">
-            {["Sun", "Rain", "Sand", "Snow"].map((w) => (
-              <ToggleButton
-                key={w}
-                active={field.weather === w}
-                onClick={() => setField("weather", field.weather === w ? undefined : w)}
-              >
-                {w}
+              <ToggleButton active={field.gameType === "Doubles"} onClick={() => setField("gameType", "Doubles")}>
+                Doubles
               </ToggleButton>
-            ))}
+            </div>
           </div>
-          <div className="field-toggle-row field-toggle-row--center">
-            <ToggleButton active={!!field.isMagicRoom} onClick={() => toggleField("isMagicRoom")}>
-              Magic Room
-            </ToggleButton>
-            <ToggleButton active={!!field.isWonderRoom} onClick={() => toggleField("isWonderRoom")}>
-              Wonder Room
-            </ToggleButton>
-            <ToggleButton active={!!field.isGravity} onClick={() => toggleField("isGravity")}>
-              Gravity
-            </ToggleButton>
-          </div>
-        </div>
 
-        {/* Left side */}
-        <div className="field-options-side field-options-side--left">
-          <SideFieldToggles side={field.attackerSide || {}} onChange={setAttackerSide} label="Left" />
+          <div className="field-options-groups">
+            <div className="field-toggle-row">
+              {["Sun", "Rain", "Sand", "Snow"].map((w) => (
+                <ToggleButton
+                  key={w}
+                  active={field.weather === w}
+                  onClick={() => setField("weather", field.weather === w ? undefined : w)}
+                >
+                  {w}
+                </ToggleButton>
+              ))}
+            </div>
+
+            <div className="field-toggle-row">
+              {["Electric", "Grassy", "Misty", "Psychic"].map((t) => (
+                <ToggleButton
+                  key={t}
+                  active={field.terrain === t}
+                  onClick={() => setField("terrain", field.terrain === t ? undefined : t)}
+                >
+                  {t}
+                </ToggleButton>
+              ))}
+            </div>
+
+            <div className="field-toggle-row">
+              <ToggleButton active={!!field.isMagicRoom} onClick={() => toggleField("isMagicRoom")}>
+                Magic Room
+              </ToggleButton>
+              <ToggleButton active={!!field.isWonderRoom} onClick={() => toggleField("isWonderRoom")}>
+                Wonder Room
+              </ToggleButton>
+              <ToggleButton active={!!field.isGravity} onClick={() => toggleField("isGravity")}>
+                Gravity
+              </ToggleButton>
+            </div>
+          </div>
         </div>
 
         {/* Right side */}
@@ -1646,7 +1974,10 @@ export default function CalculatorPage() {
 
   const [result, setResult] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState({ side: "attacker", index: 0 });
-  const [calculating, setCalculating] = useState(false);
+  const [hitsOverrides, setHitsOverrides] = useState({});
+  const [critOverrides, setCritOverrides] = useState({});
+  const [rageFistOverrides, setRageFistOverrides] = useState({});
+  const [lastRespectsOverrides, setLastRespectsOverrides] = useState({});
   const [error, setError] = useState(null);
   const [view, setView] = useState("l");
 
@@ -1654,9 +1985,17 @@ export default function CalculatorPage() {
   const attackerRef = useRef(attacker);
   const defenderRef = useRef(defender);
   const fieldRef = useRef(field);
+  const hitsOverridesRef = useRef(hitsOverrides);
+  const critOverridesRef = useRef(critOverrides);
+  const rageFistOverridesRef = useRef(rageFistOverrides);
+  const lastRespectsOverridesRef = useRef(lastRespectsOverrides);
   attackerRef.current = attacker;
   defenderRef.current = defender;
   fieldRef.current = field;
+  hitsOverridesRef.current = hitsOverrides;
+  critOverridesRef.current = critOverrides;
+  rageFistOverridesRef.current = rageFistOverrides;
+  lastRespectsOverridesRef.current = lastRespectsOverrides;
 
   // Shared search state: which side + which part + which move slot
   const [searchTarget, setSearchTarget] = useState(null); // "attacker" | "defender"
@@ -1713,7 +2052,6 @@ export default function CalculatorPage() {
     const d = defenderRef.current;
     const f = fieldRef.current;
     if (!a.name || !d.name) return;
-    setCalculating(true);
     setError(null);
     try {
       // Apply "+1 All Stats" from side toggles as boosts
@@ -1728,13 +2066,23 @@ export default function CalculatorPage() {
       const atkSide = applyAllStatsBoost(a, f.attackerSide);
       const defSide = applyAllStatsBoost(d, f.defenderSide);
 
+      const hits = hitsOverridesRef.current || {};
+      const crits = critOverridesRef.current || {};
+      const rageFists = rageFistOverridesRef.current || {};
+      const lastRespects = lastRespectsOverridesRef.current || {};
+
       // Calculate damage for all attacker moves
       const atkMoves = a.moves || ["", "", "", ""];
       const atkResults = await Promise.all(
-        atkMoves.map(async (m) => {
+        atkMoves.map(async (m, i) => {
           if (!m) return null;
           try {
-            return await calculateDamage(atkSide, defSide, m, f, 1);
+            return await calculateDamage(atkSide, defSide, m, f, 1, {
+              hits: hits[`attacker-${i}`],
+              crit: crits[`attacker-${i}`],
+              rageFistHits: rageFists[`attacker-${i}`],
+              lastRespects: lastRespects[`attacker-${i}`],
+            });
           } catch {
             return null;
           }
@@ -1744,10 +2092,15 @@ export default function CalculatorPage() {
       // Calculate damage for all defender moves
       const defMoves = d.moves || ["", "", "", ""];
       const defResults = await Promise.all(
-        defMoves.map(async (m) => {
+        defMoves.map(async (m, i) => {
           if (!m) return null;
           try {
-            return await calculateDamage(defSide, atkSide, m, f, 0);
+            return await calculateDamage(defSide, atkSide, m, f, 0, {
+              hits: hits[`defender-${i}`],
+              crit: crits[`defender-${i}`],
+              rageFistHits: rageFists[`defender-${i}`],
+              lastRespects: lastRespects[`defender-${i}`],
+            });
           } catch {
             return null;
           }
@@ -1762,17 +2115,14 @@ export default function CalculatorPage() {
       console.error(err);
       setError(err.message);
       setResult(null);
-    } finally {
-      setCalculating(false);
     }
   }, []); // stable — reads latest via refs
 
   useEffect(() => {
     if (attacker.name && defender.name && !loading) {
-      const timer = setTimeout(doCalculate, 300);
-      return () => clearTimeout(timer);
+      doCalculate();
     }
-  }, [attacker, defender, field, loading]); // doCalculate is stable so excluded
+  }, [attacker, defender, field, loading, hitsOverrides, critOverrides, rageFistOverrides, lastRespectsOverrides]); // doCalculate is stable so excluded
 
   const openSearch = useCallback(
     (part) => {
@@ -1804,10 +2154,29 @@ export default function CalculatorPage() {
         result={result}
         attacker={attacker}
         defender={defender}
+        attackerMon={attacker.name ? pokedexMap[attacker.name.toLowerCase()] : null}
+        defenderMon={defender.name ? pokedexMap[defender.name.toLowerCase()] : null}
+        field={field}
+        itemsMap={itemsMap}
         selectedSlot={selectedSlot}
         onSelectSlot={setSelectedSlot}
+        hitsOverrides={hitsOverrides}
+        onChangeHits={(side, idx, val) =>
+          setHitsOverrides((prev) => ({ ...prev, [`${side}-${idx}`]: val }))
+        }
+        critOverrides={critOverrides}
+        onChangeCrit={(side, idx, val) =>
+          setCritOverrides((prev) => ({ ...prev, [`${side}-${idx}`]: val }))
+        }
+        rageFistOverrides={rageFistOverrides}
+        onChangeRageFistHits={(side, idx, val) =>
+          setRageFistOverrides((prev) => ({ ...prev, [`${side}-${idx}`]: val }))
+        }
+        lastRespectsOverrides={lastRespectsOverrides}
+        onChangeLastRespects={(side, idx, val) =>
+          setLastRespectsOverrides((prev) => ({ ...prev, [`${side}-${idx}`]: val }))
+        }
       />
-      {calculating && <div className="calculating">Calculating...</div>}
       {error && <div className="error-text">{error}</div>}
 
       <div className="calc-view-toggle">
@@ -1824,7 +2193,12 @@ export default function CalculatorPage() {
 
       <div className="calc-layout" data-view={view}>
         <div className="calc-field-bar">
-          <FieldOptions field={field} onChange={setField} regulation={regulation} onRegulationChange={setRegulation} />
+          <FieldOptions
+            field={field}
+            onChange={setField}
+            regulation={regulation}
+            onRegulationChange={setRegulation}
+          />
         </div>
         <CalcPokemonSide
           label="Left"
