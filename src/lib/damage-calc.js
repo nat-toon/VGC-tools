@@ -659,7 +659,7 @@ class Generation {
 
 // --- NCP Calculator Data Conversion ---
 
-function convertToNcpPokemon(pokemon, speciesData, gen) {
+function convertToNcpPokemon(pokemon, speciesData, gen, powerTrick) {
   /**
    * Converts our Pokemon format to the NCP calculator's Pokemon object format.
    * NCP expects:
@@ -703,6 +703,11 @@ function convertToNcpPokemon(pokemon, speciesData, gen) {
 
   // NCP expects 5-element [atk, def, spa, spd, spe] (no HP — AT=0, DF=1, SA=2, SD=3, SP=4)
   const rawStats = [atk, def, spa, spd, spe];
+  // Power Trick: swap the Pokemon's Attack and Defense before boosts are applied,
+  // mirroring the stat preview (which swaps before applying nature/boosts).
+  if (powerTrick) {
+    [rawStats[AT], rawStats[DF]] = [rawStats[DF], rawStats[AT]];
+  }
   const boosts = [0, 0, 0, 0, 0];
 
   // Apply boosts if provided
@@ -765,7 +770,7 @@ function convertToNcpPokemon(pokemon, speciesData, gen) {
   };
 }
 
-function convertToNcpMove(moveData, attacker) {
+function convertToNcpMove(moveData, attacker, hitsOverride, moveOptions = {}) {
   /**
    * Converts our Move format to the NCP calculator's Move object format.
    * NCP expects:
@@ -778,9 +783,38 @@ function convertToNcpMove(moveData, attacker) {
    */
   if (!moveData) return null;
 
+  // --- Rage Fist: override base power based on times hit ---
+  let bp = moveData.basePower ||0;
+  if (moveData.name === "Rage Fist" && moveOptions.rageFistHits != null) {
+    bp = 50 + Math.min(6, Math.max(0, Math.floor(moveOptions.rageFistHits))) * 50;
+  }
+  // --- Last Respects: override base power based on fainted allies ---
+  if (moveData.name === "Last Respects" && moveOptions.lastRespects != null) {
+    bp = 50 + Math.min(5, Math.max(0, Math.floor(moveOptions.lastRespects))) * 50;
+  }
+
+  // --- Multi-hit handling ---
+  // moveData.multihit may be a fixed number (e.g. 3), a [min, max] range
+  // (e.g. [2, 5]), or undefined. The NCP engine needs an integer `hits`,
+  // a truthy `hitRange` for multi-hit moves, and `isTripleHit` for the
+  // Triple Kick / Triple Axel escalating-power moves.
+  const rawMultihit = moveData.multihit;
+  const isTripleHit = moveData.name === "Triple Axel" || moveData.name === "Triple Kick";
+  const maxHits = Array.isArray(rawMultihit) ? rawMultihit[1] : typeof rawMultihit === "number" ? rawMultihit : 1;
+  let hits = 1;
+  let hitRange = 0;
+  if (maxHits > 1) {
+    hitRange = 1;
+    // Default to the maximum number of hits; allow a manual override (clamped).
+    hits = maxHits;
+    if (hitsOverride != null && Number.isFinite(hitsOverride)) {
+      hits = Math.max(1, Math.min(maxHits, Math.floor(hitsOverride)));
+    }
+  }
+
   return {
-    name: moveData.name,
-    bp: moveData.basePower || 0,
+    name: moveData.name === "Rage Fist" || moveData.name === "Last Respects" ? "Shadow Claw" : moveData.name,
+    bp,
     type: moveData.type || "Normal",
     category: moveData.category || "Status",
     makesContact: moveData.flags && moveData.flags.contact ? true : false,
@@ -796,8 +830,10 @@ function convertToNcpMove(moveData, attacker) {
     isZ: moveData.isZ || false,
     isSignatureZ: false,
     isMax: moveData.isMax || false,
-    isCrit: moveData.willCrit || false,
-    hits: moveData.multihit || 1,
+    isCrit: moveData.willCrit || !!moveOptions.crit,
+    hits,
+    maxHits,
+    isTripleHit,
     isOHKO: false,
     usedOppMoveIndex: 0,
     plusEffects: null,
@@ -809,7 +845,7 @@ function convertToNcpMove(moveData, attacker) {
     ignoresFriendGuard: false,
     dealsPhysicalDamage: false,
     zp: 0,
-    hitRange: 1,
+    hitRange,
     recoil: moveData.recoil,
     drain: moveData.drain,
     multihit: moveData.multihit,
@@ -848,10 +884,10 @@ function convertToNcpField(fieldOptions) {
     isMagicRoom: fieldOptions.isMagicRoom || false,
     isWonderRoom: fieldOptions.isWonderRoom || false,
     isForesight: false,
-    isProtect: false,
+    isProtect: attackerSide.isProtected || defenderSide.isProtected || false,
     isSeaFire: false,
     isGMaxField: false,
-    isSaltCure: false,
+    isSaltCure: attackerSide.isSaltCured || defenderSide.isSaltCured || false,
     isSR: defenderSide.isSR || false,
     spikes: defenderSide.spikes || 0,
     isSteelsurge: defenderSide.isSteelsurge || false,
@@ -916,7 +952,7 @@ async function getGen() {
 
 // --- Main calculation function ---
 
-export async function calculateDamage(attacker, defender, moveName, fieldOptions = {}, defenderSlot = 1) {
+export async function calculateDamage(attacker, defender, moveName, fieldOptions = {}, defenderSlot = 1, moveOptions = {}) {
   if (!attacker.name || !defender.name || !moveName) return null;
 
   const calc = await loadCalc();
@@ -948,9 +984,9 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
   const defSpecies = g.species.get(defId);
   const moveData = g.moves.get(toID(moveName));
 
-  const ncpAttacker = convertToNcpPokemon(resolvedAttacker, atkSpecies);
-  const ncpDefender = convertToNcpPokemon(resolvedDefender, defSpecies);
-  const ncpMove = convertToNcpMove(moveData, ncpAttacker);
+  const ncpAttacker = convertToNcpPokemon(resolvedAttacker, atkSpecies, undefined, fieldOptions.attackerSide && fieldOptions.attackerSide.isPowerTrick);
+  const ncpDefender = convertToNcpPokemon(resolvedDefender, defSpecies, undefined, fieldOptions.defenderSide && fieldOptions.defenderSide.isPowerTrick);
+  const ncpMove = convertToNcpMove(moveData, ncpAttacker, moveOptions.hits, moveOptions);
   const ncpField = convertToNcpField(fieldOptions);
 
   if (!ncpAttacker || !ncpDefender || !ncpMove) {
@@ -960,21 +996,42 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
   // Set up the attacker's moves (NCP expects moves array on the Pokemon)
   ncpAttacker.moves = [ncpMove];
 
-  // GET_DAMAGE_SV's 4th param is the defender's side object (from field.getSide()).
-  // Merge the defender's side properties onto the full field so the engine can
-  // read both full-field props (weather, terrain, isGravity) and side props
-  // (isReflect, isLightScreen, isHelpingHand, etc.) from one object.
+  // GET_DAMAGE_SV's 4th param is the field object the engine reads from. The engine
+  // reads screen/hazard effects as flat props, so we must merge the relevant side
+  // properties from both sides onto the full field.
+  //   - Screens (Reflect/Light Screen/Aurora Veil), entry hazards (Stealth Rock/Spikes/
+  //     Steel Surge), Salt Cure and Protect reduce/damage the DEFENDER, so they come
+  //     from the defender's side.
+  //   - Ally buffs (Helping Hand, Friend Guard, Power Spot, Battery, Steely Spirit,
+  //     Flower Gift, Charge) boost the ATTACKER's outgoing damage, so they come from
+  //     the attacker's side.
   // defenderSlot 0 = attackerSide (Left), 1 = defenderSide (Right).
   const defenderSideProps = defenderSlot === 0
     ? (fieldOptions.attackerSide || {})
     : (fieldOptions.defenderSide || {});
+  const attackerSideProps = defenderSlot === 0
+    ? (fieldOptions.defenderSide || {})
+    : (fieldOptions.attackerSide || {});
   const ncpFieldWithSides = {
     ...ncpField,
+    // Defender-side effects
     isReflect: defenderSideProps.isReflect || false,
     isLightScreen: defenderSideProps.isLightScreen || false,
     isAuroraVeil: defenderSideProps.isAuroraVeil || false,
-    isFriendGuard: defenderSideProps.isFriendGuard || false,
-    isHelpingHand: defenderSideProps.isHelpingHand || false,
+    isSR: defenderSideProps.isSR || false,
+    spikes: defenderSideProps.spikes || 0,
+    isSteelsurge: defenderSideProps.isSteelsurge || false,
+    isSaltCure: defenderSideProps.isSaltCured || false,
+    isProtect: defenderSideProps.isProtected || false,
+    // Attacker-side effects
+    isHelpingHand: attackerSideProps.isHelpingHand || false,
+    isFriendGuard: attackerSideProps.isFriendGuard || false,
+    isPowerSpot: attackerSideProps.isPowerSpot || false,
+    isBattery: attackerSideProps.isBattery || false,
+    isSteelySpirit: attackerSideProps.isSteelySpirit || false,
+    isFlowerGiftAtk: attackerSideProps.isFlowerGift || false,
+    isFlowerGiftSpD: attackerSideProps.isFlowerGift || false,
+    isCharge: attackerSideProps.isCharge || false,
   };
 
   // Use GET_DAMAGE_SV for Champions/gen 10 calculation
@@ -988,11 +1045,28 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
 
   if (!result || !result.damage) return null;
 
-  const damageArray = Array.isArray(result.damage) ? result.damage : [result.damage];
+  const rawDamage = result.damage;
+  const numHits = ncpMove.hits || 1;
+  // Escalating-power multi-hit moves (Triple Axel/Kick, Parental Bond) return a
+  // 2D array: one 16-roll array per hit. Fixed/variable multi-hit moves return a
+  // single 16-roll array that applies identically to every hit.
+  const calc2D = Array.isArray(rawDamage) && Array.isArray(rawDamage[0]) && rawDamage.length > 1;
+  let hitRolls;
+  if (calc2D) {
+    hitRolls = rawDamage.map((arr) => [...arr].sort((a, b) => a - b));
+  } else {
+    const single = [...(Array.isArray(rawDamage) ? rawDamage : [rawDamage])].sort((a, b) => a - b);
+    hitRolls = numHits > 1 ? Array.from({ length: numHits }, () => single) : [single];
+  }
+  const isMultiHit = hitRolls.length > 1;
+  // getKOChanceText needs the raw engine damage (2D for escalating moves, 1D +
+  // move.hits for identical-hit moves), so keep the original shape here.
+  const damageArray = Array.isArray(rawDamage) ? rawDamage : [rawDamage];
   const defenderHP = ncpDefender.maxHP;
   const attackerHP = ncpAttacker.maxHP;
-  const min = Math.min(...damageArray);
-  const max = Math.max(...damageArray);
+  // Total damage is the sum of each hit's rolls (matches the displayed range for multi-hit moves).
+  const min = hitRolls.reduce((s, arr) => s + arr[0], 0);
+  const max = hitRolls.reduce((s, arr) => s + arr[arr.length - 1], 0);
 
   // Calculate recoil text from move properties (% of attacker's max HP)
   let recoil = null;
@@ -1021,7 +1095,7 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
   // Get KO chance text
   let kochance = "";
   try {
-    kochance = calc.getKOChanceText(damageArray, ncpMove, ncpDefender, ncpField, false);
+    kochance = calc.getKOChanceText(damageArray, ncpMove, ncpDefender, ncpFieldWithSides, false);
   } catch (e) {
     kochance = "";
   }
@@ -1030,6 +1104,10 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
   const minPct = defenderHP ? Math.floor((min / defenderHP) * 1000) / 10 : 0;
   const maxPct = defenderHP ? Math.floor((max / defenderHP) * 1000) / 10 : 0;
   let desc = result.description || "";
+  // Fix renamed move in description
+  if (moveData?.name === "Rage Fist" || moveData?.name === "Last Respects") {
+    desc = desc.replace(/Shadow Claw/g, moveData.name);
+  }
   const rangeStr = `${min}-${max} (${minPct} - ${maxPct}%)`;
   if (desc && kochance) {
     desc = `${desc}: ${rangeStr} -- ${kochance}`;
@@ -1047,12 +1125,21 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
     moveDesc: desc,
     kochance,
     damageArray,
+    hitRolls,
+    isMultiHit,
+    numHits,
+    maxHits: ncpMove.maxHits || 1,
     attackerAbility: ncpAttacker.ability || "",
     attackerItem: ncpAttacker.item || "",
     defenderAbility: ncpDefender.ability || "",
     defenderItem: ncpDefender.item || "",
     recovery,
     recoil,
+    isCrit: !!moveOptions.crit,
+    isRageFist: moveData?.name === "Rage Fist",
+    rageFistHits: moveData?.name === "Rage Fist" ? ncpMove.bp : null,
+    isLastRespects: moveData?.name === "Last Respects",
+    lastRespectsHits: moveData?.name === "Last Respects" ? Math.round((ncpMove.bp - 50) / 50) : null,
   };
 }
 
