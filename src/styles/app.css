@@ -5399,50 +5399,57 @@ main {
         border-bottom: 1px solid var(--border);
     }
     .field-options {
-        padding: 8px;
+        padding: 6px;
     }
     .field-options-row {
-        flex-direction: column;
-        gap: 8px;
+        flex-wrap: wrap;
+        gap: 6px;
     }
     .field-options-center {
-        order: 3;
+        order: 1;
         flex: 1 1 100%;
         min-width: 0;
-        width: 100%;
-    }
-    .field-options-top-row {
-        justify-content: center;
-    }
-    .field-options-top-row .field-reg-select {
-        width: 100%;
-        text-align: center;
-    }
-    .field-options-groups {
-        gap: 5px;
     }
     .field-options-side {
         flex: 1 1 100%;
         min-width: 0;
-        width: 100%;
     }
     .field-options-side--left {
-        order: 1;
-    }
-    .field-options-side--right {
         order: 2;
     }
+    .field-options-side--right {
+        order: 3;
+    }
     .field-options-side--right .field-side-toggles {
-        align-items: stretch;
+        align-items: flex-end;
     }
     .field-options-side--right .field-side-row {
-        justify-content: flex-start;
+        justify-content: flex-end;
+    }
+    .field-options-top-row {
+        gap: 4px;
+    }
+    .field-options-top-row .field-reg-select {
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+    .field-options-groups {
+        gap: 4px;
+    }
+    .field-options-side {
+        flex: 1 1 0;
+        min-width: 0;
     }
     .field-side-toggles {
-        padding: 6px;
+        padding: 4px;
+        gap: 4px;
     }
     .field-side-row {
-        gap: 3px;
+        gap: 2px;
+    }
+    .field-toggle-btn {
+        padding: 4px 8px;
+        font-size: 11px;
     }
     .calc-shared-search,
     .shared-search-panel {
@@ -5462,8 +5469,11 @@ main {
 }
 
 @media (max-width: 480px) {
-    .field-toggle-row {
-        gap: 2px;
+    .field-options {
+        padding: 4px;
+    }
+    .field-options-row {
+        gap: 4px;
     }
     .field-toggle-btn {
         padding: 3px 6px;
@@ -5471,10 +5481,16 @@ main {
     }
     .field-reg-select {
         font-size: 10px;
-        padding: 4px 6px;
+        padding: 3px 6px;
     }
     .field-side-label {
         font-size: 10px;
+    }
+    .field-side-toggles {
+        padding: 3px;
+    }
+    .field-side-row {
+        gap: 2px;
     }
     .result-move-right {
         gap: 4px;
