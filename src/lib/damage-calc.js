@@ -783,14 +783,13 @@ function convertToNcpMove(moveData, attacker, hitsOverride, moveOptions = {}) {
    */
   if (!moveData) return null;
 
-  // --- Rage Fist: override base power based on times hit ---
-  let bp = moveData.basePower ||0;
+  // --- Rage Fist / Last Respects: upstream uses move.timesAffected, not precomputed BP ---
+  const baseBp = moveData.basePower || 0;
+  let timesAffected;
   if (moveData.name === "Rage Fist" && moveOptions.rageFistHits != null) {
-    bp = 50 + Math.min(6, Math.max(0, Math.floor(moveOptions.rageFistHits))) * 50;
-  }
-  // --- Last Respects: override base power based on fainted allies ---
-  if (moveData.name === "Last Respects" && moveOptions.lastRespects != null) {
-    bp = 50 + Math.min(5, Math.max(0, Math.floor(moveOptions.lastRespects))) * 50;
+    timesAffected = Math.min(6, Math.max(0, Math.floor(moveOptions.rageFistHits)));
+  } else if (moveData.name === "Last Respects" && moveOptions.lastRespects != null) {
+    timesAffected = Math.min(5, Math.max(0, Math.floor(moveOptions.lastRespects)));
   }
 
   // --- Multi-hit handling ---
@@ -800,21 +799,35 @@ function convertToNcpMove(moveData, attacker, hitsOverride, moveOptions = {}) {
   // Triple Kick / Triple Axel escalating-power moves.
   const rawMultihit = moveData.multihit;
   const isTripleHit = moveData.name === "Triple Axel" || moveData.name === "Triple Kick";
-  const maxHits = Array.isArray(rawMultihit) ? rawMultihit[1] : typeof rawMultihit === "number" ? rawMultihit : 1;
+  let maxHits;
   let hits = 1;
   let hitRange = 0;
-  if (maxHits > 1) {
-    hitRange = 1;
-    // Default to the maximum number of hits; allow a manual override (clamped).
-    hits = maxHits;
+  if (isTripleHit) {
+    // Escalating-power triple moves: always 3 hits, handled via additionalDamageCalcs
+    maxHits = 3;
+    hits = 3;
+    // hitRange stays 0 — triple is flagged via isTripleHit, not hitRange
     if (hitsOverride != null && Number.isFinite(hitsOverride)) {
-      hits = Math.max(1, Math.min(maxHits, Math.floor(hitsOverride)));
+      // Respect explicit override but clamp to 3 for triple moves
+      hits = Math.max(1, Math.min(3, Math.floor(hitsOverride)));
+    }
+  } else {
+    maxHits = Array.isArray(rawMultihit) ? rawMultihit[1] : typeof rawMultihit === "number" ? rawMultihit : 1;
+    if (maxHits > 1) {
+      hitRange = 1;
+      // Default to the maximum number of hits; allow a manual override (clamped).
+      hits = maxHits;
+      if (hitsOverride != null && Number.isFinite(hitsOverride)) {
+        hits = Math.max(1, Math.min(maxHits, Math.floor(hitsOverride)));
+      }
+    } else {
+      maxHits = 1;
     }
   }
 
   return {
-    name: moveData.name === "Rage Fist" || moveData.name === "Last Respects" ? "Shadow Claw" : moveData.name,
-    bp,
+    name: moveData.name,
+    bp: baseBp,
     type: moveData.type || "Normal",
     category: moveData.category || "Status",
     makesContact: moveData.flags && moveData.flags.contact ? true : false,
@@ -846,6 +859,8 @@ function convertToNcpMove(moveData, attacker, hitsOverride, moveOptions = {}) {
     dealsPhysicalDamage: false,
     zp: 0,
     hitRange,
+    timesAffected,
+    currTripleHit: undefined,
     recoil: moveData.recoil,
     drain: moveData.drain,
     multihit: moveData.multihit,
@@ -870,9 +885,12 @@ function convertToNcpField(fieldOptions) {
   /**
    * Converts our field options to the NCP calculator's Field object format.
    * NCP expects a Field object with methods like getSide(), getWeather(), etc.
+   * Upstream also reads flat props like field.isReflect, field.format, field.isNeutralizingGas.
    */
   const weather = fieldOptions.weather || "";
   const terrain = fieldOptions.terrain || "";
+  const gameType = fieldOptions.gameType || "Singles";
+  const format = gameType === "Doubles" ? "Doubles" : "Singles";
 
   const attackerSide = fieldOptions.attackerSide || {};
   const defenderSide = fieldOptions.defenderSide || {};
@@ -891,7 +909,11 @@ function convertToNcpField(fieldOptions) {
     isSR: defenderSide.isSR || false,
     spikes: defenderSide.spikes || 0,
     isSteelsurge: defenderSide.isSteelsurge || false,
-    gameType: fieldOptions.gameType || "Singles",
+    gameType: gameType,
+    format: format,
+    // Neutralizing Gas — field ability suppression; false for parity with upstream's getNeutralGas()
+    isNeutralizingGas: false,
+    isIngrain: false,
     getSide: function (slot) {
       const side = slot === 0 ? attackerSide : defenderSide;
       return {
@@ -993,6 +1015,17 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
     throw new Error(`Failed to convert data for calculation`);
   }
 
+  // Apply Terastal type change (upstream CALCULATE_ALL does checkTerastal before GET_DAMAGE_SV).
+  // We replicate it here so direct GET_DAMAGE_SV sees the correct types.
+  for (const mon of [ncpAttacker, ncpDefender]) {
+    if (mon.isTerastalize && mon.tera_type && mon.tera_type !== 'Stellar') {
+      mon.teraSTAB1 = mon.type1;
+      mon.teraSTAB2 = mon.type2;
+      mon.type1 = mon.tera_type;
+      mon.type2 = '';
+    }
+  }
+
   // Set up the attacker's moves (NCP expects moves array on the Pokemon)
   ncpAttacker.moves = [ncpMove];
 
@@ -1068,29 +1101,111 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
   const min = hitRolls.reduce((s, arr) => s + arr[0], 0);
   const max = hitRolls.reduce((s, arr) => s + arr[arr.length - 1], 0);
 
-  // Calculate recoil text from move properties (% of attacker's max HP)
-  let recoil = null;
-  if (ncpMove.recoil) {
+  // Recoil / recovery from ALL sources (move, attacker item, defender item/ability).
+  // Damage arrays are untouched (parity with upstream GET_DAMAGE_SV); this only
+  // builds display text for the GUI from cartridge mechanics.
+  const isDamaging = max > 0 && ncpMove.category !== "Status";
+  const attackerAbility = ncpAttacker.ability || "";
+  const defenderAbility = ncpDefender.ability || "";
+  const attackerItem = ncpAttacker.item || "";
+  const defenderItem = ncpDefender.item || "";
+  const isStruggle = ncpMove.name === "Struggle";
+  const magicGuardAttacker = attackerAbility === "Magic Guard";
+  const rockHeadAttacker = attackerAbility === "Rock Head";
+  // Defender ability can be ignored by Mold Breaker-likes / Moongeist-style moves.
+  const ignoreAbilities = ["Mold Breaker", "Teravolt", "Turboblaze"].includes(attackerAbility)
+    || ["Moongeist Beam", "Sunsteel Strike", "Photon Geyser", "Searing Sunraze Smash", "Menacing Moonraze Maelstrom", "Light That Burns the Sky"].includes(ncpMove.name);
+  const effectiveDefAbility = ignoreAbilities ? "[ignored]" : defenderAbility;
+  // Sheer Force negates Life Orb / Shell Bell when the move is boosted by it.
+  // The engine sets description.attackerAbility ("Sheer Force ...") only when
+  // the boost applies (move.hasSecondaryEffect), so use the engine's own
+  // description as ground truth. Falls back to the secondaries flag when
+  // present. (Note: public/moves.json currently carries no secondaries, so
+  // the description check is the reliable signal.)
+  const hasSecondary = Array.isArray(ncpMove.secondaries) && ncpMove.secondaries.length > 0;
+  const sheerForceBoosted = attackerAbility === "Sheer Force"
+    && (String(result.description || "").includes("Sheer Force") || hasSecondary);
+  // ncpMove.makesContact is post-engine (checkContactOverride already applied
+  // Protective Pads / Punching Glove / Long Reach), so it reflects reality.
+  const makesContact = !!ncpMove.makesContact;
+  const totalHits = hitRolls.length || numHits || 1;
+
+  // Sum every guaranteed recoil source into a single number (HP + % of
+  // attacker max HP). Sources: move recoil (fraction of damage dealt), crash
+  // (half of damage dealt), Mind Blown (half of max HP), Struggle (quarter
+  // of max HP), Life Orb (10% of max HP, once per move), Rocky Helmet (1/6
+  // per contact hit), Rough Skin / Iron Barbs (1/8 per contact hit).
+  // Rock Head blocks move recoil (except Struggle); Magic Guard blocks all
+  // of the above (except Struggle). Aftermath is conditional on the KO, so
+  // it can't be summed and is left out.
+  const recoilMinParts = [];
+  const recoilMaxParts = [];
+  if (isDamaging && ncpMove.recoil && !(rockHeadAttacker && !isStruggle) && !(magicGuardAttacker && !isStruggle)) {
     const [num, den] = ncpMove.recoil;
-    const rMin = Math.max(1, Math.round(min * num / den));
-    const rMax = Math.max(1, Math.round(max * num / den));
-    recoil = { text: `recoil: ${(rMin / attackerHP * 100).toFixed(1)}% - ${(rMax / attackerHP * 100).toFixed(1)}%` };
-  } else if (ncpMove.hasCrashDamage) {
-    recoil = { text: `recoil: 50%` };
-  } else if (ncpMove.mindBlownRecoil) {
-    recoil = { text: `recoil: 50%` };
+    recoilMinParts.push(Math.max(1, Math.round(min * num / den)));
+    recoilMaxParts.push(Math.max(1, Math.round(max * num / den)));
+  } else if (ncpMove.hasCrashDamage && !magicGuardAttacker) {
+    recoilMinParts.push(Math.max(1, Math.floor(min / 2)));
+    recoilMaxParts.push(Math.max(1, Math.floor(max / 2)));
+  } else if (ncpMove.mindBlownRecoil && !magicGuardAttacker) {
+    const amount = Math.max(1, Math.floor(attackerHP / 2));
+    recoilMinParts.push(amount);
+    recoilMaxParts.push(amount);
   } else if (ncpMove.struggleRecoil) {
-    recoil = { text: `recoil: 25%` };
+    // Struggle recoil pierces Rock Head / Magic Guard.
+    const amount = Math.max(1, Math.floor(attackerHP / 4));
+    recoilMinParts.push(amount);
+    recoilMaxParts.push(amount);
   }
 
-  // Calculate recovery text from move drain (% of attacker's max HP)
-  let recovery = null;
-  if (ncpMove.drain) {
+  // Life Orb: 10% of attacker max HP, once per move, only when the move
+  // deals damage. Blocked by Magic Guard and by Sheer Force (when boosted).
+  if (isDamaging && attackerItem === "Life Orb" && !magicGuardAttacker && !sheerForceBoosted) {
+    const amount = Math.max(1, Math.floor(attackerHP / 10));
+    recoilMinParts.push(amount);
+    recoilMaxParts.push(amount);
+  }
+
+  // Rocky Helmet: 1/6 of attacker max HP per contact hit.
+  if (isDamaging && defenderItem === "Rocky Helmet" && makesContact && !magicGuardAttacker) {
+    const perHit = Math.max(1, Math.floor(attackerHP / 6));
+    recoilMinParts.push(perHit * totalHits);
+    recoilMaxParts.push(perHit * totalHits);
+  }
+
+  // Rough Skin / Iron Barbs: 1/8 of attacker max HP per contact hit.
+  if (isDamaging && (effectiveDefAbility === "Rough Skin" || effectiveDefAbility === "Iron Barbs") && makesContact && !magicGuardAttacker) {
+    const perHit = Math.max(1, Math.floor(attackerHP / 8));
+    recoilMinParts.push(perHit * totalHits);
+    recoilMaxParts.push(perHit * totalHits);
+  }
+
+  let recoil = null;
+  if (recoilMinParts.length) {
+    const rMin = recoilMinParts.reduce((s, v) => s + v, 0);
+    const rMax = recoilMaxParts.reduce((s, v) => s + v, 0);
+    recoil = {
+      text: rMin === rMax
+        ? `recoil: ${(rMin / attackerHP * 100).toFixed(1)}% (${rMin} HP)`
+        : `recoil: ${(rMin / attackerHP * 100).toFixed(1)}% - ${(rMax / attackerHP * 100).toFixed(1)}% (${rMin}-${rMax} HP)`,
+    };
+  }
+
+  // Recovery: move drain + Shell Bell (attacker item, 1/8 of damage dealt).
+  // Shell Bell is skipped when the move is Sheer Force-boosted.
+  const recoveryParts = [];
+  if (isDamaging && ncpMove.drain) {
     const [num, den] = ncpMove.drain;
     const hMin = Math.max(0, Math.floor(min * num / den));
     const hMax = Math.max(0, Math.floor(max * num / den));
-    recovery = { text: `healed ${(hMin / attackerHP * 100).toFixed(1)}% - ${(hMax / attackerHP * 100).toFixed(1)}%` };
+    recoveryParts.push(`healed ${(hMin / attackerHP * 100).toFixed(1)}% - ${(hMax / attackerHP * 100).toFixed(1)}%`);
   }
+  if (isDamaging && attackerItem === "Shell Bell" && !sheerForceBoosted) {
+    const hMin = Math.max(0, Math.floor(min / 8));
+    const hMax = Math.max(0, Math.floor(max / 8));
+    recoveryParts.push(`Shell Bell: healed ${(hMin / attackerHP * 100).toFixed(1)}% - ${(hMax / attackerHP * 100).toFixed(1)}%`);
+  }
+  let recovery = recoveryParts.length ? { text: recoveryParts.join(" · "), parts: [...recoveryParts] } : null;
 
   // Get KO chance text
   let kochance = "";
@@ -1104,10 +1219,6 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
   const minPct = defenderHP ? Math.floor((min / defenderHP) * 1000) / 10 : 0;
   const maxPct = defenderHP ? Math.floor((max / defenderHP) * 1000) / 10 : 0;
   let desc = result.description || "";
-  // Fix renamed move in description
-  if (moveData?.name === "Rage Fist" || moveData?.name === "Last Respects") {
-    desc = desc.replace(/Shadow Claw/g, moveData.name);
-  }
   const rangeStr = `${min}-${max} (${minPct} - ${maxPct}%)`;
   if (desc && kochance) {
     desc = `${desc}: ${rangeStr} -- ${kochance}`;
@@ -1137,9 +1248,9 @@ export async function calculateDamage(attacker, defender, moveName, fieldOptions
     recoil,
     isCrit: !!moveOptions.crit,
     isRageFist: moveData?.name === "Rage Fist",
-    rageFistHits: moveData?.name === "Rage Fist" ? ncpMove.bp : null,
+    rageFistHits: moveData?.name === "Rage Fist" ? (ncpMove.timesAffected ?? 0) : null,
     isLastRespects: moveData?.name === "Last Respects",
-    lastRespectsHits: moveData?.name === "Last Respects" ? Math.round((ncpMove.bp - 50) / 50) : null,
+    lastRespectsHits: moveData?.name === "Last Respects" ? (ncpMove.timesAffected ?? 0) : null,
   };
 }
 

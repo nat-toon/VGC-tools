@@ -1,0 +1,35 @@
+{
+  "repo": "nerd-of-now/NCP-VGC-Damage-Calculator",
+  "branch": "main",
+  "commit": "3cf259a2a78d426d4ac3fa951dd80a8a89f26e7d",
+  "commitShort": "3cf259a",
+  "rawBase": "https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/",
+  "files": {
+    "damage_MASTER.js": {
+      "sha256_12": "d1761a2f1ba3",
+      "size": 116271
+    },
+    "damage_SV.js": {
+      "sha256_12": "91a03edd1980",
+      "size": 8924
+    },
+    "ko_chance.js": {
+      "sha256_12": "42487c88108f",
+      "size": 31917
+    },
+    "setdex_ncp-g10.js": {
+      "sha256_12": "2db7d820a140",
+      "size": 59408
+    },
+    "pokedex.js": {
+      "sha256_12": "f4b675b79621",
+      "size": 421135
+    }
+  },
+  "fetchedAt": "2026-09-05T08:26:54.896Z",
+  "upstreamFiles": [
+    "https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/damage_MASTER.js",
+    "https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/damage_SV.js",
+    "https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/ko_chance.js"
+  ]
+}

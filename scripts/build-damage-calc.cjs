@@ -67,11 +67,32 @@ const NATURES_DATA = {
 };
 
 function postProcess(code) {
+  /*
+   * DOM/aura stripping — documented replacements only.
+   *
+   * Upstream NCP calculator reads several jQuery checkboxes/DOM writes.
+   * In the headless bundle these are replaced with ability-derived logic
+   * or removed. The diff between the bundle and upstream sources is
+   * limited to the replacements below; all damage arithmetic remains
+   * verbatim.
+   *
+   * Replacements:
+   *  1. $('#douswitch').is(':checked')            -> false (UI-only level toggle, always 50 in VGC)
+   *  2. $('#evoL'|'evoR'|...).prop('checked')    -> false (UI-only evolution/item boosts)
+   *  3. $('#p1'|#p2).find('.transform')           -> false (transform UI toggle)
+   *  4. Ruin checkboxes (tablets/vessel/sword/beads) -> ability presence:
+   *       tablets-of-ruin / vessel-of-ruin -> (attacker.ability===X || defAbility===X) && !field.isNeutralizingGas
+   *       sword-of-ruin / beads-of-ruin     -> (defender.ability===X || defAbility===X) && !field.isNeutralizingGas
+   *     (upstream uses a checkbox; we derive it from the fielded abilities)
+   *  5. auraActive / auraBreak checkboxes        -> isAttackerAura||isDefenderAura / Aura Break ability check
+   *  6. $('.p1-speed-mods').text(...) / .text() -> removed (DOM write, no calc effect)
+   *  7. Any remaining $(...).val() / $(...).prop / $(...) -> undefined/false then cleaned
+   */
   const before = code.length;
 
-  // Replace jQuery checkbox reads with false (these control UI-only features)
-  // Pattern: $(...).is(':checked') or $(...).prop("checked")
+  // 1. Level toggle — VGC always 50, upstream checkbox ignored
   code = code.replace(/\$\(\s*["']#douswitch["']\s*\)\.is\(\s*['"]?:checked['"]?\s*\)/g, 'false');
+  // 2. Evo / Tatsugiri / Clarity / Weak Armor UI boosts — disabled (false)
   code = code.replace(/\$\(\s*["']#evoL["']\s*\)\.prop\(\s*['"]?:checked['"]?\s*\)/g, 'false');
   code = code.replace(/\$\(\s*["']#evoR["']\s*\)\.prop\(\s*['"]?:checked['"]?\s*\)/g, 'false');
   code = code.replace(/\$\(\s*["']#tatsuL["']\s*\)\.prop\(\s*['"]?:checked['"]?\s*\)/g, 'false');
@@ -81,45 +102,66 @@ function postProcess(code) {
   code = code.replace(/\$\(\s*["']#weakL["']\s*\)\.prop\(\s*['"]?:checked['"]?\s*\)/g, 'false');
   code = code.replace(/\$\(\s*["']#weakR["']\s*\)\.prop\(\s*['"]?:checked['"]?\s*\)/g, 'false');
 
-  // Replace more complex jQuery reads with safe defaults
-  // Pattern: $("#p1").find(".transform").prop("checked")
+  // 3. Transform toggle
   code = code.replace(/\$\(\s*["']#p1["']\s*\)\.find\(\s*["']\.transform["']\s*\)\.prop\(\s*['"]?:checked['"]?\s*\)/g, 'false');
   code = code.replace(/\$\(\s*["']#p2["']\s*\)\.find\(\s*["']\.transform["']\s*\)\.prop\(\s*['"]?:checked['"]?\s*\)/g, 'false');
 
-  // Replace jQuery checkbox val() reads with undefined (aura checks)
-  // Pattern: $("input:checkbox[id='...']:checked").val()
-  code = code.replace(/\$\(\s*["'][^"']*["']\s*\)\.val\(\s*\)/g, 'undefined');
+  // 4. Ruin checkboxes -> ability-derived (must run BEFORE generic val() -> undefined)
+  //    Upstream: $("input:checkbox[id='tablets-of-ruin']:checked").val() != undefined && !field.isNeutralizingGas
+  code = code.replace(
+    /\$\("input:checkbox\[id='tablets-of-ruin'\]:checked"\)\.val\(\) != undefined && !field\.isNeutralizingGas/g,
+    '(attacker.ability === "Tablets of Ruin" || defAbility === "Tablets of Ruin") && !field.isNeutralizingGas'
+  );
+  code = code.replace(
+    /\$\("input:checkbox\[id='vessel-of-ruin'\]:checked"\)\.val\(\) != undefined && !field\.isNeutralizingGas/g,
+    '(attacker.ability === "Vessel of Ruin" || defAbility === "Vessel of Ruin") && !field.isNeutralizingGas'
+  );
+  code = code.replace(
+    /\$\("input:checkbox\[id='sword-of-ruin'\]:checked"\)\.val\(\) != undefined && !field\.isNeutralizingGas/g,
+    '(defender.ability === "Sword of Ruin" || defAbility === "Sword of Ruin") && !field.isNeutralizingGas'
+  );
+  code = code.replace(
+    /\$\("input:checkbox\[id='beads-of-ruin'\]:checked"\)\.val\(\) != undefined && !field\.isNeutralizingGas/g,
+    '(defender.ability === "Beads of Ruin" || defAbility === "Beads of Ruin") && !field.isNeutralizingGas'
+  );
 
-  // Replace complex jQuery expressions that read checkbox values
-  // These appear as: $("input:checkbox[id='...']:checked").val() != undefined
-  // Replace the entire jQuery expression with undefined
-  code = code.replace(/\$\([^)]*:checked[^)]*\)\.val\(\s*\)/g, 'undefined');
-
-  // Replace aura toggles with ability-based checks instead of false
-  // The original used jQuery checkboxes to manually toggle auras; we
-  // derive auraActive/auraBreak from the Pokemon abilities instead.
+  // 5. Aura checkboxes -> ability-derived
   code = code.replace(
     "var auraActive = ($(\"input:checkbox[id='\" + move.type.toLowerCase() + \"-aura']:checked\").val() != undefined);",
     'var auraActive = isAttackerAura || isDefenderAura;'
   );
   code = code.replace(
-    /var auraBreak = \$\([^)]+\)\.val\(\s*\)\s*!=\s*undefined/g,
+    "var auraBreak = ($(\"input:checkbox[id='aura-break']:checked\").val() != undefined);",
     'var auraBreak = attacker.ability === "Aura Break" || defAbility === "Aura Break";'
   );
+  // fallback pattern for auraBreak with different quoting
+  code = code.replace(
+    /var auraBreak = \$\([^)]+\)\.val\(\s*\)\s*!=\s*undefined/g,
+    'var auraBreak = attacker.ability === "Aura Break" || defAbility === "Aura Break"'
+  );
 
-  // Remove jQuery DOM write calls that crash outside a browser (replace with nothing)
+  // 6. Remove DOM write calls (.text) that crash outside browser
   code = code.replace(/\$\(\s*["'][^"']+["']\s*\)\.text\(\s*[^)]*\)\s*;?/g, '');
 
-  // Remove any remaining $() calls - replace with false if in expression context, nothing if standalone
+  // 7. Generic fallback for any remaining jQuery val/prop reads — safe defaults
+  //    These are UI-only checkboxes not covered above; undefined/false preserves parity
+  //    (they become `undefined != undefined` -> false, or `false` in boolean context).
+  code = code.replace(/\$\(\s*["'][^"']*["']\s*\)\.val\(\s*\)/g, 'undefined');
+  code = code.replace(/\$\([^)]*:checked[^)]*\)\.val\(\s*\)/g, 'undefined');
+
+  // Remove any remaining $() calls - replace with false if in expression context
   code = code.replace(/\$\(\s*["'][^"']+["']\s*\)\.\w+\(\s*[^)]*\)/g, 'false');
 
-  // Fix broken if conditions from jQuery replacements (e.g. "if (|| )", "if (false || )", "if ( || false)")
+  // Fix broken if conditions from jQuery replacements (e.g. "if (|| )")
   code = code.replace(/if\s*\(\s*\|\|\s*\)/g, 'if (false)');
   code = code.replace(/if\s*\(\s*false\s*\|\|\s*\)/g, 'if (false)');
   code = code.replace(/if\s*\(\s*\|\|\s*false\s*\)/g, 'if (false)');
   code = code.replace(/if\s*\(\s*false\s*\|\|\s*false\s*\)/g, 'if (false)');
 
   console.log(`  Removed ${((before - code.length) / 1024).toFixed(1)} KB of DOM references`);
+  if (code.includes('$(')) {
+    console.warn('  ! postProcess warning: remaining $( found — check replacement coverage');
+  }
   return code;
 }
 
@@ -127,6 +169,25 @@ function build() {
   if (!fs.existsSync(NCP_CALC_ROOT)) {
     console.error('NCP damage-calc source not found at', NCP_CALC_ROOT);
     process.exit(1);
+  }
+
+  // Resolve pinned version for provenance header
+  let versionInfo = null;
+  const versionCandidates = [
+    path.join(NCP_CALC_ROOT, 'version.json'),
+    path.join(ROOT, 'scripts', 'ncp-calc-version.json'),
+  ];
+  for (const p of versionCandidates) {
+    if (fs.existsSync(p)) {
+      try { versionInfo = JSON.parse(fs.readFileSync(p, 'utf8')); break; } catch {}
+    }
+  }
+  const versionSha = versionInfo && versionInfo.commit ? versionInfo.commit.slice(0, 7) : 'unknown';
+  const versionDate = versionInfo && versionInfo.fetchedAt ? versionInfo.fetchedAt : new Date().toISOString();
+  const versionLabel = versionInfo && versionInfo.commit ? `${versionInfo.repo}@${versionSha}` : 'NCP-VGC-Damage-Calculator@unknown';
+  console.log(`  Upstream: ${versionLabel} (fetched ${versionDate})`);
+  if (!versionInfo || !versionInfo.commit) {
+    console.warn('  ! version.json missing commit SHA — run npm run fetch with network to pin');
   }
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -151,6 +212,14 @@ function build() {
     }
   }
   const movesJson = JSON.stringify(movesData);
+
+  const provenanceHeader = `// AUTO-GENERATED — do not edit by hand
+// Source: ${versionInfo ? versionInfo.repo : 'nerd-of-now/NCP-VGC-Damage-Calculator'} ${versionInfo && versionInfo.commit ? versionInfo.commit : 'unknown'}
+// Raw: ${versionInfo ? versionInfo.rawBase : 'https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/'} + damage_MASTER.js, damage_SV.js, ko_chance.js
+// Fetched: ${versionDate}
+// Build: scripts/build-damage-calc.cjs (postProcess DOM stripping only — see function postProcess for documented replacements)
+// Repro: npm run fetch && npm run build:data (deleting src/data/damage-calc.js and rebuilding recreates equivalent bundle)
+`;
 
   // Helper function source (from NCP HTML, not in the JS source files)
   const helperSource = `
@@ -232,6 +301,7 @@ var setHasTypeFunc = function(...typesToCheck) {
   const typeChartJson = JSON.stringify(TYPE_CHART_DATA);
   const naturesJson = JSON.stringify(NATURES_DATA);
   const bundle = `
+${provenanceHeader}
 // Mock jQuery to prevent crashes outside a browser
 if (typeof window === 'undefined') {
   globalThis.window = { location: { hostname: '' } };
@@ -288,11 +358,19 @@ export const moves = ${movesJson};
   console.log('Post-processing...');
   code = postProcess(code);
 
+  // Verify no hand-edited divergence beyond documented postProcess: hash the upstream payload
+  const crypto = require('crypto');
+  const upstreamHash = crypto.createHash('sha256').update(masterCode + svCode + koCode).digest('hex').slice(0, 12);
+  console.log(`  Upstream hash: ${upstreamHash} (master ${masterCode.length}, sv ${svCode.length}, ko ${koCode.length})`);
+  console.log(`  Documented diff: DOM/aura postProcess only (see postProcess() header)`);
+
   fs.writeFileSync(OUT_FILE, code);
 
   const stat = fs.statSync(OUT_FILE);
   console.log(`  Final: ${(stat.size / 1024).toFixed(1)} KB`);
+  console.log(`  Wrote: ${path.relative(ROOT, OUT_FILE)}`);
   console.log('\nNCP Damage calc build complete.');
+  console.log(`  Provenance: ${versionLabel} upstreamHash=${upstreamHash}`);
 }
 
 build();

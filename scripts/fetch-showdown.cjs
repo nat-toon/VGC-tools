@@ -55,6 +55,9 @@ const CDN_BASE = 'https://play.pokemonshowdown.com/data/';
 const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/smogon/pokemon-showdown/master/';
 const CLIENT_GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/smogon/pokemon-showdown-client/master/';
 const NCP_CALC_RAW_BASE = 'https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/';
+const NCP_REPO_API_COMMIT = 'https://api.github.com/repos/nerd-of-now/NCP-VGC-Damage-Calculator/commits/main';
+const NCP_VERSION_OUT = path.join(UPSTREAM_DIR, 'ncp-calc', 'version.json');
+const NCP_PINNED_VERSION_OUT = path.join(__dirname, 'ncp-calc-version.json');
 
 const COMPILED_FILES = ['pokedex', 'moves', 'learnsets'];
 
@@ -265,6 +268,64 @@ async function fetchOneNcpCalc(rel) {
   await fetchTo(out, NCP_CALC_RAW_BASE + rel);
 }
 
+async function fetchNcpCommitSha() {
+  // Try to resolve the pinned commit SHA from GitHub API for recording.
+  // On failure (offline/rate-limit) return null and keep using cached SHA.
+  try {
+    const buf = await download(NCP_REPO_API_COMMIT);
+    const json = JSON.parse(buf.toString('utf8'));
+    return json.sha || null;
+  } catch (err) {
+    console.warn(`  ! could not fetch NCP commit SHA: ${err.message} - keeping cached version if present`);
+    return null;
+  }
+}
+
+function hashFile(filePath) {
+  try {
+    const crypto = require('crypto');
+    const data = fs.readFileSync(filePath);
+    return crypto.createHash('sha256').update(data).digest('hex').slice(0, 12);
+  } catch {
+    return null;
+  }
+}
+
+async function writeNcpVersion(commitSha) {
+  const files = {};
+  for (const rel of NCP_CALC_FILES) {
+    const p = path.join(UPSTREAM_DIR, 'ncp-calc', rel);
+    if (fs.existsSync(p)) files[rel] = { sha256_12: hashFile(p), size: fs.statSync(p).size };
+  }
+  // also record setdex/pokedex if present
+  for (const [key, p] of [['setdex_ncp-g10.js', NCP_SETDEX_OUT], ['pokedex.js', NCP_POKEDEX_OUT]]) {
+    if (fs.existsSync(p)) files[key] = { sha256_12: hashFile(p), size: fs.statSync(p).size };
+  }
+  let previous = null;
+  if (fs.existsSync(NCP_PINNED_VERSION_OUT)) {
+    try { previous = JSON.parse(fs.readFileSync(NCP_PINNED_VERSION_OUT, 'utf8')); } catch {}
+  }
+  // Prefer freshly fetched SHA, else keep previous, else mark as unknown (offline)
+  const resolvedSha = commitSha || (previous && previous.commit) || null;
+  const payload = {
+    repo: 'nerd-of-now/NCP-VGC-Damage-Calculator',
+    branch: 'main',
+    commit: resolvedSha,
+    commitShort: resolvedSha ? resolvedSha.slice(0, 7) : null,
+    rawBase: NCP_CALC_RAW_BASE,
+    files,
+    fetchedAt: new Date().toISOString(),
+    upstreamFiles: NCP_CALC_FILES.map(f => NCP_CALC_RAW_BASE + f),
+  };
+  ensureDir(path.dirname(NCP_VERSION_OUT));
+  fs.writeFileSync(NCP_VERSION_OUT, JSON.stringify(payload, null, 2) + '\n');
+  fs.writeFileSync(NCP_PINNED_VERSION_OUT, JSON.stringify(payload, null, 2) + '\n');
+  console.log(`  NCP version: ${resolvedSha ? resolvedSha.slice(0, 7) : 'unknown'} -> ${path.relative(CACHE_DIR, NCP_VERSION_OUT)} + ${path.relative(path.join(__dirname, '..'), NCP_PINNED_VERSION_OUT)}`);
+  if (!resolvedSha) {
+    console.warn('  ! commit SHA unknown (offline or API rate-limited). Build will use cached files; run with network to pin.');
+  }
+}
+
 function summarisePerModCoverage(modDirs) {
   /*
    * After the fetch loop, inspect which per-mod files actually
@@ -339,6 +400,10 @@ async function main() {
 
   console.log('\nNCP VGC Damage Calculator pokedex (from GitHub)');
   await fetchTo(NCP_POKEDEX_OUT, NCP_POKEDEX_URL);
+
+  console.log('\nNCP version pin');
+  const ncpSha = await fetchNcpCommitSha();
+  await writeNcpVersion(ncpSha);
 
   if (modDirs.length === 0) {
     console.warn('  ! no mod dirs discovered from regulations-config (no per-mod files fetched)');

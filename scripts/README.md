@@ -16,11 +16,49 @@ npm run smoke          # run smoke tests against the built artefacts
 The default `npm run build` runs the data pipeline first, so the public
 JSON and bundled data files are always in sync with the source mod.
 
+### NCP Damage Calculator refresh (one-command path)
+
+The damage engine is sourced directly from
+`https://github.com/nerd-of-now/NCP-VGC-Damage-Calculator`
+via `script_res/{damage_MASTER.js,damage_SV.js,ko_chance.js}`.
+To pin or refresh it:
+
+```
+npm run fetch && npm run build:data   # refetch upstream + rebuild src/data/damage-calc.js
+```
+
+`scripts/fetch-showdown.cjs` fetches the three files into
+`scripts/.cache/upstream/ncp-calc/` and writes a pinned version record to
+`scripts/.cache/upstream/ncp-calc/version.json` **and**
+`scripts/ncp-calc-version.json` (commit SHA, branch, raw URLs, file hashes,
+`fetchedAt`). Deleting `src/data/damage-calc.js` and re-running `npm run build:data`
+recreates an equivalent bundle from the cached files (reproducible; the bundle
+header records the upstream SHA and hash so the diff can be audited).
+
+If the upstream repo renames or moves those `script_res/` files, the fetch
+will 404. The build will abort with the attempted URLs, cached SHA, and the
+failing parity cases logged — report those and the upstream change required to
+resolve the new raw URL. Similarly, if the core calculation becomes dependent on
+jQuery/DOM that cannot be stripped while preserving parity, the build will warn
+about remaining `$(` references and fail the parity checks with the same logs.
+
 ## Source data
 
-Two sources feed the data:
+Three sources feed the data:
 
-1. `https://raw.githubusercontent.com/smogon/pokemon-showdown/master/...`
+1. `https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/`
+   - NCP VGC Damage Calculator engine. Pulled into
+     `scripts/.cache/upstream/ncp-calc/` by `fetch-showdown.cjs`:
+     - `damage_MASTER.js`  - shared damage logic (gen 1-9 + Champions)
+     - `damage_SV.js`      - Scarlet/Violet + Champions overrides
+     - `ko_chance.js`      - KO chance text
+   - Built into `src/data/damage-calc.js` by `scripts/build-damage-calc.cjs`
+     via concatenation + `postProcess()` DOM stripping (only documented
+     replacements; see that function's header for the exact diff). The
+     provenance header in the bundle records the upstream commit SHA and
+     file hashes. Refresh with `npm run fetch && npm run build:data`.
+
+2. `https://raw.githubusercontent.com/smogon/pokemon-showdown/master/...`
    - Showdown's master TypeScript data files.  Pulled into
      `scripts/.cache/upstream/data/` by `fetch-showdown.cjs` and read
      from there by the build scripts:
@@ -39,7 +77,7 @@ Two sources feed the data:
      to the repo path.  The build scripts will read from there instead
      of the cache.
 
-2. `https://play.pokemonshowdown.com/data/` - Showdown's compiled JSON:
+3. `https://play.pokemonshowdown.com/data/` - Showdown's compiled JSON:
    - `pokedex.json`
    - `moves.json`
    - `learnsets.json`
@@ -52,12 +90,15 @@ Two sources feed the data:
 
 ```
 fetch-showdown.cjs       -> scripts/.cache/{pokedex,moves,learnsets}.json
-                          scripts/.cache/upstream/data/...
+                           scripts/.cache/upstream/data/...
+                           scripts/.cache/upstream/ncp-calc/{damage_MASTER.js,damage_SV.js,ko_chance.js} + version.json
+                           scripts/ncp-calc-version.json (pinned SHA)
 parse-ts-data.cjs        -> src/data/{items,abilities}.js                  (bundled)
 build-regulations.cjs    -> src/data/regulations/{key}.js                  (bundled)
-                          src/data/regulations/index.js                    (barrel)
-                          public/regulations/{key}/learnsets.json          (fetched)
+                           src/data/regulations/index.js                    (barrel)
+                           public/regulations/{key}/learnsets.json          (fetched)
 slim-showdown.cjs        -> public/{pokedex,moves,learnsets}.json          (fetched)
+build-damage-calc.cjs    -> src/data/damage-calc.js                        (NCP bundle, provenance header)
 ```
 
 `build-data.cjs` runs all four in order.  The fetch step is a no-op when
@@ -232,6 +273,29 @@ Workflow:
 
 To unfreeze: set `frozen: false` (or remove the field) and rebuild -
 the bundle + learnset will be regenerated from upstream.
+
+## How the NCP damage bundle is built
+
+`scripts/build-damage-calc.cjs` concatenates the three pinned upstream files
+(`damage_MASTER.js`, `damage_SV.js`, `ko_chance.js`) from
+`scripts/.cache/upstream/ncp-calc/` and wraps them in an ESM factory
+(`new Function` in non-strict mode). The only diff from verbatim upstream
+is the documented `postProcess()` DOM stripping:
+
+- Level/evo/tatsu/clang/weak Armor checkboxes -> `false`
+- Transform checkboxes -> `false`
+- Ruin checkboxes (`tablets/vessel/sword/beads-of-ruin`) -> ability presence
+  (`attacker.ability === "…"` / `defender.ability === "…"`, preserving
+  `&& !field.isNeutralizingGas`)
+- Aura checkboxes (`-aura`, `aura-break`) -> `isAttackerAura||isDefenderAura`
+  and `Aura Break` ability check
+- Speed-mod DOM writes (`$(".p1-speed-mods").text(...)`) -> removed
+- Remaining `$(...).val()/prop` -> `undefined`/`false`
+
+The build logs the upstream commit SHA (from `scripts/ncp-calc-version.json`),
+the concatenated hash, and the size removed. No hand-edits are made to
+`src/data/damage-calc.js`; deleting it and re-running `npm run build:data`
+recreates an equivalent bundle from the cached files.
 
 ## How items/abilities are slimmed
 
