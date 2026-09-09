@@ -6,7 +6,8 @@
 // `export * as m_a from "./m-a.js"`).  src/lib/regulations.js
 // iterates the namespaces at startup to build REGULATIONS.
 
-export const REG_ORDER = ["m-b","m-a"];
+export const REG_ORDER = ["m-c","m-b","m-a"];
 
+export * as m_c from "./m-c.js";
 export * as m_b from "./m-b.js";
 export * as m_a from "./m-a.js";

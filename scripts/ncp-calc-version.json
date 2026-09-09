@@ -1,13 +1,13 @@
 {
   "repo": "nerd-of-now/NCP-VGC-Damage-Calculator",
   "branch": "main",
-  "commit": "3cf259a2a78d426d4ac3fa951dd80a8a89f26e7d",
-  "commitShort": "3cf259a",
+  "commit": "0e766b01c951d4de05c4af2a3566a0d5c7c8372d",
+  "commitShort": "0e766b0",
   "rawBase": "https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/",
   "files": {
     "damage_MASTER.js": {
-      "sha256_12": "d1761a2f1ba3",
-      "size": 116271
+      "sha256_12": "5a98febad1ee",
+      "size": 116304
     },
     "damage_SV.js": {
       "sha256_12": "91a03edd1980",
@@ -22,11 +22,11 @@
       "size": 59408
     },
     "pokedex.js": {
-      "sha256_12": "f4b675b79621",
-      "size": 421135
+      "sha256_12": "c7d9c8fc5161",
+      "size": 421602
     }
   },
-  "fetchedAt": "2026-09-05T08:26:54.896Z",
+  "fetchedAt": "2026-09-09T13:27:29.025Z",
   "upstreamFiles": [
     "https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/damage_MASTER.js",
     "https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/damage_SV.js",

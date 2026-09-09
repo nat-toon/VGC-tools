@@ -1,8 +1,8 @@
 
 // AUTO-GENERATED — do not edit by hand
-// Source: nerd-of-now/NCP-VGC-Damage-Calculator 3cf259a2a78d426d4ac3fa951dd80a8a89f26e7d
+// Source: nerd-of-now/NCP-VGC-Damage-Calculator 0e766b01c951d4de05c4af2a3566a0d5c7c8372d
 // Raw: https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/ + damage_MASTER.js, damage_SV.js, ko_chance.js
-// Fetched: 2026-09-05T08:26:54.896Z
+// Fetched: 2026-09-09T13:27:29.025Z
 // Build: scripts/build-damage-calc.cjs (postProcess DOM stripping only — see function postProcess for documented replacements)
 // Repro: npm run fetch && npm run build:data (deleting src/data/damage-calc.js and rebuilding recreates equivalent bundle)
 
@@ -2470,8 +2470,8 @@ function calcFinalMods(move, attacker, defender, field, description, isCritical,
         finalMods.push(0x800);
         description.defenderAbility = defAbility;
     }
-    //h. Fluffy (contact)
-    if (defAbility === "Fluffy" && move.makesContact) {
+    //h. Fluffy (contact)/Aura Guard
+    if (["Fluffy", "Aura Guard"].includes(defAbility) && move.makesContact) {
         finalMods.push(0x800);
         description.defenderAbility = defAbility;
     }
