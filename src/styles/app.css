@@ -5506,3 +5506,434 @@ main {
         height: 100px;
     }
 }
+
+/* Matchup panel (per-member offence/defence vs NCP sets) */
+.mu-wrap {
+    margin-top: 12px;
+    border-top: 1px solid var(--border);
+    padding-top: 4px;
+}
+.mu-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+}
+.mu-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    margin-bottom: -1px;
+    transition:
+        color 0.1s,
+        border-color 0.1s;
+}
+.mu-tab:hover {
+    color: var(--text);
+}
+.mu-tab--active {
+    color: var(--text);
+    border-bottom-color: var(--text);
+}
+.mu-filterbar {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 12px 0;
+}
+.mu-filterbar .search-input-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.mu-chiprow {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.mu-chipgroup {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px;
+}
+.mu-chipgroup-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    padding: 0 4px 0 6px;
+}
+.mu-chip {
+    height: 20px;
+    min-width: 20px;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    padding: 0 8px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 3px;
+    transition:
+        background 0.1s,
+        color 0.1s;
+    line-height: 1;
+}
+.mu-chip:hover {
+    color: var(--text);
+}
+.mu-chip--active {
+    color: #fff;
+    background: #2563eb;
+}
+.mu-optbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 12px 0;
+}
+.mu-optgroup {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 4px;
+    flex-wrap: wrap;
+}
+.mu-stage {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+.mu-stage-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    padding: 0 2px;
+}
+.mu-stage-btn {
+    height: 20px;
+    min-width: 20px;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    padding: 0 6px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 3px;
+    line-height: 1;
+    transition:
+        background 0.1s,
+        color 0.1s;
+}
+.mu-stage-btn:hover:not(:disabled) {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.06);
+}
+.mu-stage-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+.mu-stage-val {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    min-width: 24px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.mu-verdict {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 3px;
+    padding: 2px 8px;
+}
+.mu-verdict--you {
+    color: #78c850;
+    background: rgba(120, 200, 80, 0.12);
+}
+.mu-verdict--foe {
+    color: #e63946;
+    background: rgba(230, 57, 70, 0.12);
+}
+.mu-verdict--tie {
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.05);
+}
+.mu-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+.mu-empty {
+    padding: 32px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    grid-column: 1 / -1;
+}
+.mu-card {
+    background: #0d0d0d;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.1s;
+    min-width: 0;
+}
+.mu-card:hover {
+    border-color: var(--border-strong);
+}
+.mu-card--open {
+    border-color: var(--border-strong);
+}
+.mu-card-btn {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s;
+}
+.mu-card-btn:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+.mu-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.mu-card-names {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.mu-card-species {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mu-card-set {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mu-card-dmg {
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.mu-card-pct {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+}
+.mu-card-attrs {
+    display: flex;
+    gap: 8px;
+}
+.mu-card-attr {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1 1 0;
+}
+.mu-card-attr--fit {
+    flex: none;
+}
+.mu-card-attr-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    line-height: 1.2;
+}
+.mu-card-attr-val {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+}
+.mu-card-item--icon {
+    padding: 2px;
+    justify-content: center;
+}
+.mu-card-item--icon .item-row-icon {
+    margin: 0;
+}
+.mu-card-attr-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mu-card-stats6 {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+}
+.mu-card-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 3px;
+    padding: 3px 2px;
+    min-width: 0;
+}
+.mu-card-stat-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+}
+.mu-card-stat-val {
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted-bright);
+}
+.mu-stat--rel .mu-card-stat-val {
+    color: var(--text);
+    font-weight: 700;
+}
+.mu-stat--plus .mu-card-stat-val {
+    color: #e63946;
+    font-weight: 700;
+}
+.mu-stat--minus .mu-card-stat-val {
+    color: #5b8def;
+    font-weight: 700;
+}
+.mu-card-pending {
+    color: var(--muted);
+}
+.mu-card-skel {
+    display: block;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 3px;
+}
+.mu-card-skel-dmg {
+    height: 20px;
+    width: 60%;
+}
+.mu-card-skel-attrs {
+    height: 32px;
+}
+.mu-card-skel-stats {
+    height: 44px;
+}
+.mu-editor {
+    border-top: 1px solid var(--border);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mu-editor-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.mu-editor-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    flex: 1 1 120px;
+    min-width: 0;
+}
+.mu-editor-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    padding: 6px 10px;
+    outline: none;
+}
+.mu-editor-input:focus {
+    border-color: var(--tier-4);
+}
+.mu-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+}
+.mu-editor-sp {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+}
+.mu-editor-reset {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: inherit;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition:
+        background 0.1s,
+        color 0.1s,
+        border-color 0.1s;
+    flex-shrink: 0;
+}
+.mu-editor-reset:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    border-color: var(--border-strong);
+}

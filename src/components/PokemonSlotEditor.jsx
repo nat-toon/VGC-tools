@@ -19,6 +19,7 @@ import { getAbilityByName } from "../lib/abilities.js";
 import { getStoneForForme, getMegaAbility } from "../lib/mega.js";
 import { buildAliasSet, matchesAlias } from "../lib/utils.js";
 import { useRowHeight, useMobileMedia } from "../lib/hooks.js";
+import MatchupPanel from "./MatchupPanel.jsx";
 
 const SpriteView = memo(function SpriteView({ mon, failed, onFailed }) {
   const sprite = useMemo(() => (mon ? getLargeSprite(mon) : null), [mon]);
@@ -674,7 +675,10 @@ function PokemonSlotEditor({ slot, slotIndex, allPokemon, pokedexMap, itemsMap, 
 
       {/* Expanded Stats Panel */}
       {selectedPart === "stats" && mon && (
-        <StatsPanel mon={mon} slot={slot} slotIndex={slotIndex} onUpdate={onUpdate} />
+        <>
+          <StatsPanel mon={mon} slot={slot} slotIndex={slotIndex} onUpdate={onUpdate} />
+          <MatchupPanel slot={slot} mon={mon} pokedexMap={pokedexMap} regulation={regulation} />
+        </>
       )}
 
       {/* Expanded Move Search Panel */}
