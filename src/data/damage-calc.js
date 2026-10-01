@@ -1,8 +1,8 @@
 
 // AUTO-GENERATED — do not edit by hand
-// Source: nerd-of-now/NCP-VGC-Damage-Calculator 0e766b01c951d4de05c4af2a3566a0d5c7c8372d
+// Source: nerd-of-now/NCP-VGC-Damage-Calculator 1369b359b85f0a6343df006acde92cc4a7d07805
 // Raw: https://raw.githubusercontent.com/nerd-of-now/NCP-VGC-Damage-Calculator/main/script_res/ + damage_MASTER.js, damage_SV.js, ko_chance.js
-// Fetched: 2026-09-09T13:27:29.025Z
+// Fetched: 2026-10-01T17:05:37.396Z
 // Build: scripts/build-damage-calc.cjs (postProcess DOM stripping only — see function postProcess for documented replacements)
 // Repro: npm run fetch && npm run build:data (deleting src/data/damage-calc.js and rebuilding recreates equivalent bundle)
 
@@ -836,11 +836,12 @@ function checkMoveTypeChange(move, field, attacker) {
                         : "Normal";
     }
     else if (move.name == "Terrain Pulse") {
-        move.type = field.terrain === "Electric" ? "Electric"
-            : field.terrain === "Grassy" ? "Grass"
-                : field.terrain === "Misty" ? "Fairy"
-                    : field.terrain === "Psychic" ? "Psychic"
-                        : "Normal";
+        move.type = field.terrain === "" || !pIsGrounded(attacker, field) ? "Normal"
+            : field.terrain === "Electric" ? "Electric"
+                : field.terrain === "Grassy" ? "Grass"
+                    : field.terrain === "Misty" ? "Fairy"
+                        : field.terrain === "Psychic" ? "Psychic"
+                            : "Typeless";  //last case should never happen, just there to help with debugging
     }
     else if (move.name == "Techno Blast") {
         move.type = attacker.item === "Burn Drive" ? "Fire"
@@ -933,8 +934,9 @@ function checkContactOverride(move, attacker) {
 }
 
 function setIsQuarteredByProtect(attacker, defender, field, move, description) {
-    let qualifiedQuartered = field.isProtect && (move.isZ || move.isSignatureZ || attacker.isDynamax || attacker.ability === 'Piercing Drill' || (attacker.ability === 'Unseen Fist' && gen >= 10));
-    if (qualifiedQuartered && attacker.ability === 'Piercing Drill') description.attackerAbility = attacker.ability;
+    let qualifiedAbility = (attacker.ability === 'Piercing Drill' || (attacker.ability === 'Unseen Fist' && gen >= 10)) && move.makesContact;
+    let qualifiedQuartered = field.isProtect && (move.isZ || move.isSignatureZ || attacker.isDynamax || qualifiedAbility);
+    if (qualifiedQuartered && qualifiedAbility) description.attackerAbility = attacker.ability;
     return qualifiedQuartered;
 }
 
@@ -1091,7 +1093,7 @@ function checkMeFirst(move, moveDescName, defender, isDynamax) {
 
 function statusMoves(move, attacker, defender, description) {
     if (move.name === "Pain Split" && attacker.item !== "Assault Vest") {
-        return { "damage": [Math.floor((defender.curHP - attacker.curHP) / 2)], "description": buildDescription(description) };
+        return { "damage": [defender.curHP - Math.floor((defender.curHP + attacker.curHP) / 2)], "description": buildDescription(description) };
     }
     else if (move.bp === 0 || move.category === "Status") {
         return { "damage": [0], "description": buildDescription(description) };
@@ -1408,7 +1410,7 @@ function basePowerFunc(move, description, turnOrder, attacker, defender, field, 
         //a. Speed based
         //a.i. Gyro Ball
         case "Gyro Ball":
-            basePower = Math.min(150, Math.floor(25 * defender.stats[SP] / attacker.stats[SP]));
+            basePower = Math.min(150, Math.floor(25 * defender.stats[SP] / attacker.stats[SP]) + 1);
             description.moveBP = basePower;
             break;
         //a.ii. Electro Ball
@@ -2057,7 +2059,7 @@ function calcAtMods(move, attacker, defAbility, description, field) {
         || (attacker.ability === "Flash Fire" && attacker.abilityOn && move.type === "Fire")
         || (attacker.ability === "Steelworker" && move.type === "Steel")
         || (attacker.ability === "Gorilla Tactics" && move.category === "Physical" && !attacker.isDynamax)
-        || (["Plus", "Minus"].indexOf(attacker.ability) !== -1 && attacker.abilityOn)
+        || (["Plus", "Minus"].indexOf(attacker.ability) !== -1 && attacker.abilityOn && move.category === "Special")
         || (attacker.ability === "Sharpness" && move.isSlice)
         || (attacker.ability === "Rocky Payload" && move.type === "Rock")
         || (attacker.ability === "Fire Mane" && move.type === "Fire")) {
